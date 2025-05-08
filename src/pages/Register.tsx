@@ -203,10 +203,11 @@ const Register: React.FC = () => {
       };
       console.log(newUser);
 
-      await axios.post(`${serverUrl}/api/db/users`, { newUser })
+      const response = await axios.post(`${serverUrl}/api/db/users`, { newUser });
+      const createdUser = response.data;
 
       // Send welcome SMS
-      // await sendWelcomeSms(newUser.phone, newUser.id, formData.password);
+       await sendWelcomeSms(createdUser.phone, createdUser.id, formData.password);
 
       // Set the user as logged in
       // setToStorage('logged_in_user', newUser.id);
