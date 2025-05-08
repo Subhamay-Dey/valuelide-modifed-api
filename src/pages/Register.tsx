@@ -21,7 +21,7 @@ const mockHashPassword = (password: string) => {
 // Helper to send welcome SMS
 const sendWelcomeSms = async (phone: string, customerId: string, password: string) => {
   // Use the local proxy endpoint to avoid CORS issues
-  const url = `http://localhost:3001/api/send-sms?phone=${encodeURIComponent(phone)}&customerId=${encodeURIComponent(customerId)}&password=${encodeURIComponent(password)}`;
+  const url = `${serverUrl}/api/send-sms?phone=${encodeURIComponent(phone)}&customerId=${encodeURIComponent(customerId)}&password=${encodeURIComponent(password)}`;
   try {
     await fetch(url);
   } catch (e) {
