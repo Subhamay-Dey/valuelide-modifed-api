@@ -452,7 +452,7 @@ const Kyc: React.FC = () => {
                 <KycUploader
                   documentType="idProof"
                   documentTitle="Identity Proof"
-                  documentDescription="Upload a government-issued ID (passport, driver's license, etc.)"
+                  documentDescription="Enter a government-issued ID Number (passport, driver's license, etc.)"
                   status={documents.idProof ? 'pending' : null as any}
                   existingDocument={documents.idProof?.base64}
                   existingDocumentName={documents.idProof?.name}
@@ -498,7 +498,7 @@ const Kyc: React.FC = () => {
                 <KycUploader
                   documentType="addressProof"
                   documentTitle="Address Proof"
-                  documentDescription="Upload a utility bill or bank statement (not older than 3 months)"
+                  documentDescription="Enter a Address Proof"
                   status={documents.addressProof ? 'pending' : null as any}
                   existingDocument={documents.addressProof?.base64}
                   existingDocumentName={documents.addressProof?.name}
@@ -544,7 +544,7 @@ const Kyc: React.FC = () => {
                 <KycUploader
                   documentType="bankDetails"
                   documentTitle="Bank Account Details"
-                  documentDescription="Upload a cancelled check or bank statement showing your account details"
+                  documentDescription="Enter A Bank Account Details"
                   status={documents.bankDetails ? 'pending' : null as any}
                   existingDocument={documents.bankDetails?.base64}
                   existingDocumentName={documents.bankDetails?.name}
