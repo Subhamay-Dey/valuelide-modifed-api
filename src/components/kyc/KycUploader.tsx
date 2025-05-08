@@ -126,15 +126,15 @@ const KycUploader: React.FC<KycUploaderProps> = ({
     // }
   };
 
-  // const renderStatusIndicator = () => {
-  //   if (!status) {
-  //     return (
-  //       <div className="flex items-center text-neutral-600">
-  //         <FileQuestion className="h-5 w-5 mr-2" />
-  //         <span>Not yet uploaded</span>
-  //       </div>
-  //     );
-  //   }
+  const renderStatusIndicator = () => {
+    // if (!status) {
+    //   return (
+    //     <div className="flex items-center text-neutral-600">
+    //       <FileQuestion className="h-5 w-5 mr-2" />
+    //       <span>Not yet uploaded</span>
+    //     </div>
+    //   );
+    // }
 
     switch (status) {
       case 'approved':
