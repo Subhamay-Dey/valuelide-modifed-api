@@ -44,7 +44,7 @@ const Login: React.FC = () => {
       setIsLoading(true);
       await new Promise(resolve => setTimeout(resolve, 1000));
       const users = await getAllUsers();
-      const user = users.find(u => u.email === email);
+      const user = users.find(u => u.distributorId === email); //email is distributorId
       console.log(user);
 
 
@@ -193,11 +193,11 @@ const Login: React.FC = () => {
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div data-aos="fade-up" data-aos-delay="200">
                 <Input
-                  id="email"
-                  type="email"
+                  id="distributorId"
+                  type="text"
                   label="Distributor ID"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={email} //distributorId
+                  onChange={(e) => setEmail(e.target.value)} //distributorId
                   placeholder="Enter your Distributor ID"
                   leftIcon={<Mail className="h-5 w-5 text-blue-500 animate-bounce" />}
                   required

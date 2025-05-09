@@ -176,6 +176,8 @@ const Register: React.FC = () => {
       }
 
       console.log("Using referral code for registration:", finalReferralCode || "NONE");
+      const distributorId = "VL" + Math.floor(100 + Math.random() * 900); // Random 3-digit number, e.g., VL234
+
 
       // Create a new user object to store in localStorage
       const newUser = {
@@ -183,6 +185,7 @@ const Register: React.FC = () => {
         email: formData.email,
         phone: formData.phone,
         address: formData.address,
+        distributorId:distributorId,
         profilePicture: '', // Default empty
         sponsorId: finalReferralCode ? finalReferralCode.toUpperCase() : null,
         referralCode: formData.name.substring(0, 4).toUpperCase() + Math.floor(Math.random() * 10000),
@@ -208,7 +211,7 @@ const Register: React.FC = () => {
       console.log(createdUser,'createdUser');
 
       // Send welcome SMS
-       await sendWelcomeSms(createdUser.phone, createdUser.id, formData.password);
+       await sendWelcomeSms(createdUser.phone, createdUser.distributorId, formData.password);
 
       // Set the user as logged in
       // setToStorage('logged_in_user', newUser.id);

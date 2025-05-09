@@ -7,6 +7,7 @@ export interface User {
   email: string;
   phone: string;
   address: string;
+  distributorId:string;
   profilePicture?: string;
   sponsorId: string | null;
   referralCode: string;
