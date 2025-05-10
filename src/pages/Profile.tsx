@@ -14,6 +14,7 @@ const Profile: React.FC = () => {
     email: '',
     phone: '',
     address: '',
+    distributorId:'',
     joinDate: '',
     profileImage: null as string | null,
     referralCode: '',
@@ -33,6 +34,7 @@ const Profile: React.FC = () => {
           email: currentUser.email || '',
           phone: currentUser.phone || '',
           address: currentUser.address || '',
+          distributorId:currentUser.distributorId ||'',
           joinDate: currentUser.registrationDate || new Date().toISOString().split('T')[0],
           profileImage: null,
           referralCode: currentUser.referralCode || '',
@@ -209,7 +211,7 @@ const Profile: React.FC = () => {
               )}
             </div>
             <h2 className="text-xl font-semibold text-neutral-900">{user.name}</h2>
-            <p className="text-neutral-500 mb-4">Member since {new Date(user.joinDate).toLocaleDateString()}</p>
+            <p className="text-neutral-500 mb-4">Distributor ID: {user.distributorId}</p>
             
             {!isEditing ? (
               <Button 

@@ -15,19 +15,50 @@ const Referrals: React.FC = () => {
   const [showCustomizeError, setShowCustomizeError] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
-  useEffect(() => {
-    // Get current user from local storage
-    const user = getCurrentUser();
-    setCurrentUser(user);
-  }, []);
+  // useEffect(() => {
+  //   // Get current user from local storage
+  //   const user = getCurrentUser();
+  //   setCurrentUser(user);
+  // }, []);
   
   // Get user from local storage (in a real app this would be more robust)
-  const user = currentUser || { name: 'John Doe', referralCode: 'JOHNDOE123' };
+  // const user = currentUser ;
+  // console.log(user?.referralCode,"referalUSer")
   
   // Sample referral data
   const baseUrl = 'https://valuelife.in/register?ref=';
-  const [referralCode, setReferralCode] = useState(user.referralCode || 'JOHNDOE123');
-  const [referralLink, setReferralLink] = useState(`${baseUrl}${referralCode.toLowerCase()}`);
+  const [referralCode, setReferralCode] =  useState<string | undefined>();
+  const [referralLink, setReferralLink] = useState('');
+    const [socialTemplates, setSocialTemplates] = useState([
+    { id: 1, platform: 'Facebook', icon: <Facebook className="h-4 w-4 text-[#1877F2]" />, message: '', selected: true },
+    { id: 2, platform: 'Twitter', icon: <Twitter className="h-4 w-4 text-[#1DA1F2]" />, message: '', selected: false },
+    { id: 3, platform: 'Instagram', icon: <Instagram className="h-4 w-4 text-[#E4405F]" />, message: '', selected: false },
+    { id: 4, platform: 'WhatsApp', icon: <Share2 className="h-4 w-4 text-[#25D366]" />, message: '', selected: false }
+  ]);
+  useEffect(() => {
+    const runSetup = async () => {
+      // Step 1: Load user
+      const user = getCurrentUser();
+      setCurrentUser(user);
+
+      // Step 2: If user has a referral code
+      if (user?.referralCode) {
+        const code = user.referralCode;
+        const link = `${baseUrl}${code.toLowerCase()}`;
+        setReferralCode(code);
+        setReferralLink(link);
+
+        // Step 3: Update socialTemplates
+        const updatedTemplates = socialTemplates.map(template => ({
+          ...template,
+          message: getMessageTemplate(template.platform, code)
+        }));
+        setSocialTemplates(updatedTemplates);
+      }
+    };
+
+    runSetup();
+  }, []); // ✅ Only runs once on mount
   
   // Marketing materials (sample data)
   const marketingMaterials = [
@@ -39,45 +70,62 @@ const Referrals: React.FC = () => {
   ];
   
   // Sample social media templates
-  const [socialTemplates, setSocialTemplates] = useState([
-    { 
-      id: 1, 
-      platform: 'Facebook',
-      icon: <Facebook className="h-4 w-4 text-[#1877F2]" />,
-      message: `I've joined Value Life and I'm loving the products and opportunity! Join me using my referral link: ${referralLink}`,
-      selected: true
-    },
-    { 
-      id: 2, 
-      platform: 'Twitter',
-      icon: <Twitter className="h-4 w-4 text-[#1DA1F2]" />,
-      message: `Check out these amazing health products from Value Life! Use my referral link to join: ${referralLink}`,
-      selected: false
-    },
-    { 
-      id: 3, 
-      platform: 'Instagram',
-      icon: <Instagram className="h-4 w-4 text-[#E4405F]" />,
-      message: `Transform your health and wealth with Value Life! Click the link in my bio or use code ${referralCode}`,
-      selected: false
-    },
-    { 
-      id: 4, 
-      platform: 'WhatsApp',
-      icon: <Share2 className="h-4 w-4 text-[#25D366]" />,
-      message: `Hey! I've discovered Value Life's amazing products and business opportunity. Join using my referral link: ${referralLink}`,
-      selected: false
+  // const [socialTemplates, setSocialTemplates] = useState([
+  //   { 
+  //     id: 1, 
+  //     platform: 'Facebook',
+  //     icon: <Facebook className="h-4 w-4 text-[#1877F2]" />,
+  //     message: `I've joined Value Life and I'm loving the products and opportunity! Join me using my referral link: ${referralLink}`,
+  //     selected: true
+  //   },
+  //   { 
+  //     id: 2, 
+  //     platform: 'Twitter',
+  //     icon: <Twitter className="h-4 w-4 text-[#1DA1F2]" />,
+  //     message: `Check out these amazing health products from Value Life! Use my referral link to join: ${referralLink}`,
+  //     selected: false
+  //   },
+  //   { 
+  //     id: 3, 
+  //     platform: 'Instagram',
+  //     icon: <Instagram className="h-4 w-4 text-[#E4405F]" />,
+  //     message: `Transform your health and wealth with Value Life! Click the link in my bio or use code ${referralCode}`,
+  //     selected: false
+  //   },
+  //   { 
+  //     id: 4, 
+  //     platform: 'WhatsApp',
+  //     icon: <Share2 className="h-4 w-4 text-[#25D366]" />,
+  //     message: `Hey! I've discovered Value Life's amazing products and business opportunity. Join using my referral link: ${referralLink}`,
+  //     selected: false
+  //   }
+  // ]);
+  const getMessageTemplate = (platform: string, code: string) => {
+      if (!code) return '';
+    const link = `${baseUrl}${code.toLowerCase()}`;
+    switch (platform) {
+      case 'Facebook':
+        return `I've joined Value Life and I'm loving the products and opportunity! Join me using my referral link: ${link}`;
+      case 'Twitter':
+        return `Check out these amazing health products from Value Life! Use my referral link to join: ${link}`;
+      case 'Instagram':
+        return `Transform your health and wealth with Value Life! Click the link in my bio or use code ${code}`;
+      case 'WhatsApp':
+        return `Hey! I've discovered Value Life's amazing products and business opportunity. Join using my referral link: ${link}`;
+      default:
+        return '';
     }
-  ]);
+  };
+
 
   // Update social templates when referral code changes
   useEffect(() => {
-    setReferralLink(`${baseUrl}${referralCode.toLowerCase()}`);
+    setReferralLink(`${baseUrl}${referralCode?.toLowerCase()}`);
     setSocialTemplates(prev => prev.map(template => ({
       ...template,
       message: template.message.replace(/https:\/\/valuelife\.in\/register\?ref=[a-zA-Z0-9]+/, referralLink)
     })));
-  }, [referralCode]);
+  }, [referralCode, referralLink]);
   
   // Check KYC status
   if (currentUser && currentUser.kycStatus !== 'approved') {
@@ -109,7 +157,7 @@ const Referrals: React.FC = () => {
     // Simple validation
     if (/^[a-zA-Z0-9]{3,10}$/.test(customSuffix)) {
       // Format: First 4 chars of name + custom suffix (or default numeric)
-      const prefix = user.name.substring(0, 4).toUpperCase();
+      const prefix = Users.name.substring(0, 4).toUpperCase();
       const newReferralCode = `${prefix}${customSuffix.toUpperCase()}`;
       setReferralCode(newReferralCode);
       setCustomizing(false);
@@ -203,7 +251,7 @@ const Referrals: React.FC = () => {
                     </label>
                     <div className="mt-1 flex items-center">
                       <span className="bg-neutral-200 px-3 py-2 rounded-l-md text-neutral-700 font-mono">
-                        {user.name.substring(0, 4).toUpperCase()}
+                        {Users.name.substring(0, 4).toUpperCase()}
                       </span>
                       <input
                         type="text"
