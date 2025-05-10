@@ -57,7 +57,7 @@ const Network: React.FC = () => {
       console.log("Fetching network data for user:", currentUser.name, "with referral code:", currentUser.referralCode);
       
       // Calculate network structure
-      const allUsers = getAllUsers();
+      const allUsers = await getAllUsers();
       console.log("Total users in system:", allUsers.length);
       
       // Log all users' referral codes and sponsors for debugging
@@ -67,7 +67,7 @@ const Network: React.FC = () => {
       });
       
       // Find direct referrals (level 1) - these are users who have the current user's referral code as their sponsorId
-      const directReferrals = allUsers.filter(u => 
+      const directReferrals = await allUsers.filter(u => 
         u.sponsorId && u.sponsorId.toUpperCase() === currentUser.referralCode.toUpperCase()
       );
       console.log("Direct referrals found:", directReferrals.length);
