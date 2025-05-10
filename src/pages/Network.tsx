@@ -37,6 +37,8 @@ interface ReferralUser {
   hasDownline: boolean;
 }
 
+const serverUrl = import.meta.env.VITE_SERVER_URL
+
 const Network: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'tree' | 'list'>('list');
   const [networkData, setNetworkData] = useState<NetworkMember | null>(null);
@@ -48,6 +50,8 @@ const Network: React.FC = () => {
   const [networkMembers, setNetworkMembers] = useState<NetworkMemberWithLevel[]>([]);
   const [referralUsers, setReferralUsers] = useState<ReferralUser[]>([]);
   const [networkStats, setNetworkStats] = useState<NetworkStats | null>(null);
+
+  
   
   // Function to create a mock referral for demonstration purposes
   const createMockReferral = () => {
@@ -281,7 +285,7 @@ const Network: React.FC = () => {
         // Fetch network stats from API
         let userNetworkStats: Partial<NetworkStats> = {};
         try {
-          const response = await fetch(`https://valuelife-backend.onrender.com/api/db/stats/network/${currentUser.id}`);
+          const response = await fetch(`${serverUrl}/api/db/stats/network/${currentUser.id}`);
           if (response.ok) {
             userNetworkStats = await response.json();
           } else {
@@ -315,7 +319,7 @@ const Network: React.FC = () => {
   
         // Update network node via API
         try {
-          const response = await fetch(`/api/db/network/${currentUser.id}`, {
+          const response = await fetch(`${serverUrl}/api/db/network/${currentUser.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(treeData),
@@ -329,7 +333,7 @@ const Network: React.FC = () => {
   
         // Update network stats via API
         try {
-          const response = await fetch(`/api/db/stats/network/${currentUser.id}`, {
+          const response = await fetch(`${serverUrl}/api/db/stats/network/${currentUser.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(networkStats),
@@ -387,52 +391,52 @@ const Network: React.FC = () => {
       );
     }
 
-  // const createMockReferral = async () => {
-  //   if (!currentUser) return;
+  const createMockReferral = async () => {
+    if (!currentUser) return;
   
-  //   setIsLoading(true);
+    setIsLoading(true);
   
-  //   try {
-  //     const mockUser: User = {
-  //       id: Math.random().toString(36).substring(2, 15),
-  //       name: `Test User ${Math.floor(Math.random() * 1000)}`,
-  //       email: `test${Math.floor(Math.random() * 1000)}@example.com`,
-  //       phone: `555-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
-  //       address: "123 Test Street, Test City",
-  //       sponsorId: currentUser.referralCode.toUpperCase(), // Referral logic
-  //       referralCode: `TEST${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
-  //       registrationDate: new Date().toISOString(),
-  //       kycStatus: 'pending',
-  //       kycDocuments: {},
-  //       bankDetails: {
-  //         accountName: "",
-  //         accountNumber: "",
-  //         bankName: "",
-  //         ifscCode: ""
-  //       },
-  //       profilePicture: ""
-  //     };
+    try {
+      const mockUser: User = {
+        id: Math.random().toString(36).substring(2, 15),
+        name: `Test User ${Math.floor(Math.random() * 1000)}`,
+        email: `test${Math.floor(Math.random() * 1000)}@example.com`,
+        phone: `555-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+        address: "123 Test Street, Test City",
+        sponsorId: currentUser.referralCode.toUpperCase(), // Referral logic
+        referralCode: `TEST${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+        registrationDate: new Date().toISOString(),
+        kycStatus: 'pending',
+        kycDocuments: {},
+        bankDetails: {
+          accountName: "",
+          accountNumber: "",
+          bankName: "",
+          ifscCode: ""
+        },
+        profilePicture: ""
+      };
   
-  //     const res = await fetch("/api/network/user/create", {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify(mockUser)
-  //     });
+      const res = await fetch(`${serverUrl}/api/network/user/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(mockUser)
+      });
   
-  //     if (!res.ok) {
-  //       throw new Error("Failed to create mock referral");
-  //     }
+      if (!res.ok) {
+        throw new Error("Failed to create mock referral");
+      }
   
-  //     console.log(`Mock user ${mockUser.name} created via backend`);
+      console.log(`Mock user ${mockUser.name} created via backend`);
       
-  //     // Re-fetch updated network data
-  //     await fetchData();
-  //   } catch (error) {
-  //     console.error("Error creating mock referral:", error);
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
+      // Re-fetch updated network data
+      await fetchData();
+    } catch (error) {
+      console.error("Error creating mock referral:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   // Function to set up a test relationship between existing users
   
@@ -494,7 +498,7 @@ const Network: React.FC = () => {
       // }
 
       // 4. Get current user's network node
-      const { data: networkNode } = await axios.get(`/api/db/network/${currentUser.id}`);
+      const { data: networkNode } = await axios.get(`${serverUrl}/api/db/network/${currentUser.id}`);
       
       // Add other user as a direct child
       const newChild = {
@@ -526,13 +530,13 @@ const Network: React.FC = () => {
       // console.log(`Network children count is now: ${networkData.children?.length || 0}`);
 
       // 6. Update network node
-      await axios.put(`/api/db/network/${currentUser.id}`, {
+      await axios.put(`${serverUrl}/api/db/network/${currentUser.id}`, {
         ...networkNode,
         children
       });
 
       // 7. Optionally update network stats
-      await axios.put(`/api/db/stats/network/${currentUser.id}`, {
+      await axios.put(`${serverUrl}/api/db/stats/network/${currentUser.id}`, {
         totalChildren: children.length // or any other computed stats
       });
 
@@ -546,72 +550,6 @@ const Network: React.FC = () => {
       setIsLoading(false);
     };
   };
-
-  // const setupExistingUserRelationship = async () => {
-  //   if (!currentUser) return;
-  
-  //   setIsLoading(true);
-  
-  //   try {
-  //     // 1. Fetch all users from backend
-  //     const usersRes = await fetch('/api/users');
-  //     if (!usersRes.ok) throw new Error('Failed to fetch users');
-  //     const allUsers: User[] = await usersRes.json();
-  
-  //     // 2. Find an eligible user
-  //     const otherUser = allUsers.find(user =>
-  //       user.id !== currentUser.id &&
-  //       user.sponsorId !== currentUser.referralCode
-  //     );
-  
-  //     if (!otherUser) {
-  //       alert("No other users found to set as a referral");
-  //       return;
-  //     }
-  
-  //     console.log(`Assigning ${otherUser.name} under ${currentUser.name}`);
-  
-  //     // 3. Update the other user's sponsorId
-  //     const patchRes = await fetch(`/api/users/${otherUser.id}`, {
-  //       method: 'PATCH',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({ sponsorId: currentUser.referralCode.toUpperCase() })
-  //     });
-  
-  //     if (!patchRes.ok) throw new Error("Failed to update user's sponsorId");
-  
-  //     // 4. Update the MLM network tree
-  //     const networkPayload = {
-  //       sponsorId: currentUser.id,
-  //       child: {
-  //         id: otherUser.id,
-  //         name: otherUser.name,
-  //         profilePicture: otherUser.profilePicture || '',
-  //         referralCode: otherUser.referralCode,
-  //         joinDate: otherUser.registrationDate,
-  //         active: true
-  //       }
-  //     };
-  
-  //     const networkRes = await fetch('/api/network', {
-  //       method: 'POST',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify(networkPayload)
-  //     });
-  
-  //     if (!networkRes.ok) throw new Error('Failed to update network data');
-  
-  //     // 5. Refresh updated data
-  //     await fetchData();
-  
-  //     alert(`${otherUser.name} has been added as your direct referral!`);
-  //   } catch (error) {
-  //     console.error('Error:', error);
-  //     alert("Something went wrong while setting up the referral.");
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
   
   if (isLoading || !stats) {
     return (
