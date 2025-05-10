@@ -1,5 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import { getFromStorage, setToStorage, getAllUsers } from '../utils/localStorageService';
+import axios from 'axios';
+
+const serverUrl = import.meta.env.VITE_SERVER_URL;
 
 export interface WalletData {
   balance: number;
@@ -70,16 +73,16 @@ export const createWithdrawalRequest = (
 
     // Get existing withdrawal requests
     const withdrawalRequests = getWithdrawalRequests();
-    
+
     // Log for debugging
     console.log("Existing withdrawal requests:", withdrawalRequests);
-    
+
     // Add new request
     withdrawalRequests.push(newRequest);
-    
+
     // Save to localStorage
     setToStorage('withdrawal_requests', withdrawalRequests);
-    
+
     // Log the updated array for debugging
     console.log("Updated withdrawal requests:", getWithdrawalRequests());
 
@@ -94,73 +97,60 @@ export const createWithdrawalRequest = (
 };
 
 // Get all withdrawal requests
-export const getWithdrawalRequests = (): WithdrawalRequest[] => {
-  const requests = getFromStorage<WithdrawalRequest[]>('withdrawal_requests');
-  if (!requests) {
-    // Initialize empty array if not exists
-    setToStorage('withdrawal_requests', [] as WithdrawalRequest[]);
+export const getWithdrawalRequests = async (userId?: string): Promise<WithdrawalRequest[]> => {
+  try {
+    const url = `${serverUrl}/api/db/withdrawalRequests?userId=${userId}}`
+
+    const response = await axios.get(url);
+    const withdrawalRequests = response.data;
+
+    // (Optional) Cache to local storage
+    setToStorage('withdrawal_requests', withdrawalRequests);
+
+    return withdrawalRequests;
+  } catch (error) {
+    console.error('Error fetching withdrawal requests:', error);
     return [];
   }
-  return requests;
 };
 
 // Update withdrawal request status
-export const updateWithdrawalStatus = (
+export const updateWithdrawalStatus = async (
   requestId: string,
   status: WithdrawalRequest['status'],
   remarks?: string,
   transactionId?: string
-): boolean => {
+): Promise<boolean> => {
   try {
-    const withdrawalRequests = getWithdrawalRequests();
-    const requestIndex = withdrawalRequests.findIndex(req => req.id === requestId);
-
-    if (requestIndex === -1) {
-      console.error('Withdrawal request not found');
-      return false;
-    }
-
-    const request = withdrawalRequests[requestIndex];
-    const userId = request.userId;
-    const userWallet = getFromStorage(`wallet_${userId}`) as WalletData || { balance: 0, pendingWithdrawals: 0 };
-
-    // Update request
-    withdrawalRequests[requestIndex] = {
-      ...request,
+    const updatePayload = {
       status,
+      remarks,
+      transactionId,
       processedDate: new Date().toISOString(),
-      remarks: remarks || request.remarks,
-      transactionId: transactionId || request.transactionId
     };
 
-    // Update user's wallet based on status
-    if (status === 'approved') {
-      // When approved, deduct the amount from the user's balance
-      userWallet.balance = Math.max(0, (userWallet.balance || 0) - request.amount);
-      userWallet.pendingWithdrawals = (userWallet.pendingWithdrawals || 0) + request.amount;
-      console.log(`Approved withdrawal: Updated user ${userId} wallet balance to ${userWallet.balance}`);
-    } else if (status === 'rejected') {
-      // When rejected, no changes needed since we didn't modify the balance on request creation
-      console.log(`Rejected withdrawal: No changes to user ${userId} wallet balance`);
-    } else if (status === 'paid') {
-      // When paid, clear the pending amount (balance was already deducted at approval)
-      userWallet.pendingWithdrawals = Math.max(0, (userWallet.pendingWithdrawals || 0) - request.amount);
-      console.log(`Paid withdrawal: Cleared pending amount for user ${userId}`);
-    }
+    const response = await axios.put(`${serverUrl}/api/db/withdrawalRequests/${requestId}`, updatePayload);
 
-    // Save changes
-    setToStorage('withdrawal_requests', withdrawalRequests);
-    setToStorage(`wallet_${userId}`, userWallet);
+    const updatedRequest: WithdrawalRequest = response.data;
+
+    // Optional: sync localStorage (if needed in your UI)
+    const withdrawalRequests = getFromStorage<WithdrawalRequest[]>('withdrawal_requests') || [];
+    const index = withdrawalRequests.findIndex(req => req.id === requestId);
+
+    if (index !== -1) {
+      withdrawalRequests[index] = updatedRequest;
+      setToStorage('withdrawal_requests', withdrawalRequests);
+    }
 
     return true;
   } catch (error) {
-    console.error('Error updating withdrawal status:', error);
+    console.error(`Failed to update withdrawal request ${requestId}:`, error);
     return false;
   }
 };
 
-// Get withdrawal requests for a specific user
-export const getUserWithdrawalRequests = (userId: string): WithdrawalRequest[] => {
-  const allRequests = getWithdrawalRequests();
+// Get withdrawal requests for a specific user  
+export const getUserWithdrawalRequests = async (userId: string): Promise<WithdrawalRequest[]> => {
+  const allRequests = await getWithdrawalRequests();
   return allRequests.filter(req => req.userId === userId);
 }; 

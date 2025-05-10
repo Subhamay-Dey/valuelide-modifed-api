@@ -8,6 +8,8 @@ import Input from '../components/ui/Input';
 import { getWithdrawalRequests, updateWithdrawalStatus, WithdrawalRequest } from '../services/walletService';
 import { processPayout, getRazorpayBalance } from '../services/razorpayService';
 import toast from 'react-hot-toast';
+import { getCurrentUser } from '../utils/localStorageService';
+import { User } from '../types';
 
 const AdminWithdrawals: React.FC = () => {
   const navigate = useNavigate();
@@ -29,14 +31,16 @@ const AdminWithdrawals: React.FC = () => {
       return;
     }
 
+    const user = getCurrentUser();
+
     // Load withdrawal requests
-    const requests = getWithdrawalRequests();
+    const requests = await getWithdrawalRequests(user?.id);
     setWithdrawalRequests(requests);
-    
+
     // Load Razorpay balance
     loadRazorpayBalance();
   };
-  
+
   const loadRazorpayBalance = async () => {
     setIsLoadingBalance(true);
     try {
@@ -73,13 +77,13 @@ const AdminWithdrawals: React.FC = () => {
   };
 
   const filteredRequests = withdrawalRequests.filter(request => {
-    const matchesSearch = 
+    const matchesSearch =
       request.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       request.userId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       request.id.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesStatus = filterStatus === 'all' || request.status === filterStatus;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -90,7 +94,7 @@ const AdminWithdrawals: React.FC = () => {
 
   const handleApproveRequest = async (request: WithdrawalRequest) => {
     // Update request status to approved
-    const success = updateWithdrawalStatus(request.id, 'approved', 'Approved by admin');
+    const success = await updateWithdrawalStatus(request.id, 'approved', 'Approved by admin');
     if (success) {
       toast.success(`Request approved for ${request.userName}`);
       loadData();
@@ -101,7 +105,7 @@ const AdminWithdrawals: React.FC = () => {
 
   const handleRejectRequest = async (request: WithdrawalRequest) => {
     // Update request status to rejected
-    const success = updateWithdrawalStatus(request.id, 'rejected', 'Rejected by admin');
+    const success = await updateWithdrawalStatus(request.id, 'rejected', 'Rejected by admin');
     if (success) {
       toast.success(`Request rejected for ${request.userName}`);
       loadData();
@@ -115,21 +119,21 @@ const AdminWithdrawals: React.FC = () => {
 
     try {
       toast.loading("Initializing Razorpay payment gateway...");
-      
+
       // Process the payout using Razorpay (this will open the Razorpay checkout UI)
       const result = await processPayout(request);
-      
+
       toast.dismiss(); // Remove loading toast
-      
+
       if (result.success && result.data) {
         // Update withdrawal request status
-        const updateSuccess = updateWithdrawalStatus(
+        const updateSuccess = await updateWithdrawalStatus(
           request.id,
           'paid',
           'Processed through Razorpay',
           result.data.id
         );
-        
+
         if (updateSuccess) {
           toast.success(`Payment of ₹${request.amount} processed successfully to ${request.accountDetails.accountHolderName}`);
           setShowDetailsModal(false);
@@ -143,7 +147,7 @@ const AdminWithdrawals: React.FC = () => {
     } catch (error) {
       toast.dismiss(); // Remove loading toast
       console.error('Error processing payment:', error);
-      
+
       if (error instanceof Error && error.message === "Payment cancelled by user") {
         toast.error("Payment cancelled by user");
       } else {
@@ -197,7 +201,7 @@ const AdminWithdrawals: React.FC = () => {
         <div className="absolute left-1/2 top-1/3 w-24 h-24 bg-gradient-to-br from-yellow-200 via-pink-200 to-blue-200 rounded-full filter blur-lg opacity-40 animate-blob animation-delay-1000"></div>
         <div className="absolute right-1/3 bottom-1/4 w-16 h-16 bg-gradient-to-tr from-green-200 via-blue-200 to-purple-200 rounded-full filter blur-lg opacity-30 animate-blob animation-delay-2500"></div>
         {/* Gradient overlay */}
-        <div className="fixed inset-0 animate-bg-gradient-vivid" style={{background: 'linear-gradient(120deg, rgba(255,0,150,0.18), rgba(0,229,255,0.15), rgba(255,255,0,0.13), rgba(0,255,128,0.12))'}}></div>
+        <div className="fixed inset-0 animate-bg-gradient-vivid" style={{ background: 'linear-gradient(120deg, rgba(255,0,150,0.18), rgba(0,229,255,0.15), rgba(255,255,0,0.13), rgba(0,255,128,0.12))' }}></div>
       </div>
 
       <div className="mb-6">
@@ -232,7 +236,7 @@ const AdminWithdrawals: React.FC = () => {
               </Button>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-4 w-full md:w-auto">
             <div className="flex items-center space-x-2">
               <label className="text-sm font-medium text-neutral-600">Status:</label>
@@ -248,7 +252,7 @@ const AdminWithdrawals: React.FC = () => {
                 <option value="paid">Paid</option>
               </select>
             </div>
-            
+
             <div className="relative flex-1">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-neutral-500">
                 <Search className="h-4 w-4" />
@@ -322,7 +326,7 @@ const AdminWithdrawals: React.FC = () => {
                         >
                           View
                         </Button>
-                        
+
                         {request.status === 'pending' && (
                           <>
                             <Button
@@ -345,7 +349,7 @@ const AdminWithdrawals: React.FC = () => {
                             </Button>
                           </>
                         )}
-                        
+
                         {request.status === 'approved' && (
                           <Button
                             variant="primary"
@@ -436,8 +440,8 @@ const AdminWithdrawals: React.FC = () => {
                 </div>
               </div>
               <div className="bg-gradient-to-r from-pink-50 via-blue-50 to-purple-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setShowDetailsModal(false)}
                   className="w-full sm:w-auto sm:ml-3 animate-hover-glow"
                 >
