@@ -15,6 +15,7 @@ const Referrals: React.FC = () => {
   const [showCustomizeError, setShowCustomizeError] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
+  const serverUrl = import.meta.env.VITE_SERVER_URL;
   // useEffect(() => {
   //   // Get current user from local storage
   //   const user = getCurrentUser();
@@ -26,7 +27,7 @@ const Referrals: React.FC = () => {
   // console.log(user?.referralCode,"referalUSer")
   
   // Sample referral data
-  const baseUrl = 'https://valuelife.in/register?ref=';
+  const baseUrl = `${serverUrl}/register?ref=`;
   const [referralCode, setReferralCode] =  useState<string | undefined>();
   const [referralLink, setReferralLink] = useState('');
     const [socialTemplates, setSocialTemplates] = useState([
