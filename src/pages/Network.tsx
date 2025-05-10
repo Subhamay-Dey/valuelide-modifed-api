@@ -190,7 +190,10 @@ const Network: React.FC = () => {
       // Fetch network stats from API
       let userNetworkStats: Partial<NetworkStats> = {};
       try {
-        const response = await fetch(`${serverUrl}/api/db/stats/network/${currentUser.id}`);
+        const response = await fetch(`${serverUrl}/api/db/stats/network/${currentUser.id}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+        });
         if (response.ok) {
           userNetworkStats = await response.json();
         } else {
@@ -295,8 +298,6 @@ const Network: React.FC = () => {
       </MainLayout>
     );
   }
-
-  
   
   // Function to create a mock referral for demonstration purposes
   // const createMockReferral = () => {
