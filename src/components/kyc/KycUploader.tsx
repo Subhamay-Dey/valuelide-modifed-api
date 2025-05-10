@@ -116,6 +116,7 @@ const KycUploader: React.FC<KycUploaderProps> = ({
     };
 
     console.log(newSubmission);
+    alert("KYC Request Created and Sent to Admin!");
 
 
     await addKycSubmission(newSubmission);
