@@ -9,11 +9,13 @@ import NetworkTreeView from '../components/network/NetworkTreeView';
 import { getAllUsersForAdmin, updateUserProfile, updateUserKycStatus, getNetworkMembers, deleteUser, getUserNetworkMembers, setToStorage, getAllUsers } from '../utils/localStorageService';
 import { User as UserType, KYCStatus } from '../types';
 import { NetworkMember } from '../types';
-
+import axios from 'axios';
 interface UserData extends UserType {
   directReferrals: number;
   teamSize: number;
 }
+
+const serverUrl = import.meta.env.VITE_SERVER_URL;
 
 const AdminUsers: React.FC = () => {
   const navigate = useNavigate();
@@ -249,14 +251,15 @@ const AdminUsers: React.FC = () => {
     setDeleteError(null);
   };
 
-  const handleDeleteUser = () => {
+  const handleDeleteUser = async () => {
     if (!userToDelete) return;
 
     setDeleteLoading(true);
     setDeleteError(null);
 
     try {
-      const success = deleteUser(userToDelete.id);
+      const response = await axios.delete(`${serverUrl}/api/db/users/${userToDelete.id}`);
+      const success = response.data;
 
       if (success) {
         // If we're deleting the currently selected user, clear it
