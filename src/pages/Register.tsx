@@ -62,10 +62,10 @@ const Register: React.FC = () => {
 
   // If referral code is provided in URL, try to find the referrer
   useEffect(() => {
-    const findReferrer = () => {
+    const findReferrer = async () => {
       if (referralCode) {
         console.log("Found referral code in URL:", referralCode);
-        const users = getAllUsers();
+        const users = await getAllUsers();
         const foundReferrer = users.find(user => user.referralCode.toUpperCase() === referralCode.toUpperCase());
 
         if (foundReferrer) {
@@ -81,29 +81,75 @@ const Register: React.FC = () => {
   }, [referralCode]);
 
   // When manual referral code changes, try to find the referrer
-  useEffect(() => {
-    if (formData.manualReferralCode && formData.manualReferralCode.length >= 3) {
-      const users = getAllUsers();
-      const foundReferrer = users.find(
-        user => user.referralCode.toUpperCase() === formData.manualReferralCode.toUpperCase()
-      );
+//   useEffect(() => {
+// const fetchUsers = async () => {
+//      if (formData.manualReferralCode && formData.manualReferralCode.length >= 3) {
+//       const users = await getAllUsers();
+//       const foundReferrer = users.find(
+//         user => user.referralCode.toUpperCase() === formData.manualReferralCode.toUpperCase()
+//       );
 
-      if (foundReferrer) {
-        setReferrer(foundReferrer);
-        // Clear any previous error
-        setErrors(prev => {
-          const newErrors = { ...prev };
-          delete newErrors.manualReferralCode;
-          return newErrors;
-        });
-      } else {
+//       if (foundReferrer) {
+//         setReferrer(foundReferrer);
+//         // Clear any previous error
+//         setErrors(prev => {
+//           const newErrors = { ...prev };
+//           delete newErrors.manualReferralCode;
+//           return newErrors;
+//         });
+//       } else {
+//         setReferrer(null);
+//         // Don't show error immediately while typing, only when submitting
+//       }
+//     } else {
+//       setReferrer(null);
+//     }
+// }
+//  fetchUsers();
+//   }, [formData.manualReferralCode]);
+  useEffect(() => {
+  const fetchUsers = async () => {
+    if (formData.manualReferralCode && formData.manualReferralCode.length >= 3) {
+      try {
+        const users = await getAllUsers();
+
+        // Ensure users is an array before calling .find
+        if (Array.isArray(users)) {
+          const foundReferrer = users.find(
+            user =>
+              user.referralCode.toUpperCase() ===
+              formData.manualReferralCode.toUpperCase()
+          );
+
+          if (foundReferrer) {
+            setReferrer(foundReferrer);
+
+            // Clear any previous error
+            setErrors(prev => {
+              const newErrors = { ...prev };
+              delete newErrors.manualReferralCode;
+              return newErrors;
+            });
+          } else {
+            setReferrer(null);
+            // Optionally: set a soft warning state here if needed
+          }
+        } else {
+          console.warn("getAllUsers() did not return an array:", users);
+          setReferrer(null);
+        }
+      } catch (error) {
+        console.error("Error fetching users:", error);
         setReferrer(null);
-        // Don't show error immediately while typing, only when submitting
       }
     } else {
       setReferrer(null);
     }
-  }, [formData.manualReferralCode]);
+  };
+
+  fetchUsers();
+}, [formData.manualReferralCode]);
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
