@@ -46,6 +46,7 @@ const Network: React.FC = () => {
   const [referrer, setReferrer] = useState<User | null>(null);
   const [networkMembers, setNetworkMembers] = useState<NetworkMemberWithLevel[]>([]);
   const [referralUsers, setReferralUsers] = useState<ReferralUser[]>([]);
+  const [networkStats, setNetworkStats] = useState<NetworkStats | null>(null);
   
   // Define fetchData function
   const fetchData = async () => {
@@ -175,22 +176,36 @@ const Network: React.FC = () => {
       console.log("Direct children in tree:", treeData.children?.length || 0);
       
       // Update the user's network data in storage with what we've calculated
-      const userNetworkKey = `mlm_network_members_${currentUser.id}`;
-      setToStorage(userNetworkKey, treeData);
-      console.log(`Updated user's network data at key: ${userNetworkKey}`);
+      // const userNetworkKey = `mlm_network_members_${currentUser.id}`;
+      // setToStorage(userNetworkKey, treeData);
+      // console.log(`Updated user's network data at key: ${userNetworkKey}`);
       
       // Get stats from both sources to ensure we have the most up-to-date info
-      const userNetworkStats = getUserNetworkStats(currentUser.id);
+      // const userNetworkStats = getUserNetworkStats(currentUser.id);
+
+      // Fetch network stats from API
+      let userNetworkStats: Partial<NetworkStats> = {};
+      try {
+        const response = await fetch(`https://valuelife-backend.onrender.com/api/db/stats/network/${currentUser.id}`);
+        if (response.ok) {
+          userNetworkStats = await response.json();
+        } else {
+          console.error('Failed to fetch network stats');
+        }
+      } catch (error) {
+        console.error('Error fetching network stats:', error);
+      }
       
-      // Compare and use the most accurate stats
+      // Calculate updated stats
       const directRefCount = Math.max(
         userNetworkStats.directReferrals || 0,
         directReferrals.length
       );
       
-      // Update the stats with the actual counts
-      const updatedStats = {
-        ...userNetworkStats,
+      setNetworkStats({
+        dailyGrowth: userNetworkStats.dailyGrowth ?? [],
+        weeklyGrowth: userNetworkStats.weeklyGrowth ?? [],
+        monthlyGrowth: userNetworkStats.monthlyGrowth ?? [],
         totalMembers: network.length,
         directReferrals: directRefCount,
         activeMembers: network.length,
@@ -200,17 +215,46 @@ const Network: React.FC = () => {
           2: indirectReferrals.length,
           3: 0
         }
-      };
+      });
+  
+
+      // Update network node via API
+      try {
+        const response = await fetch(`/api/db/network/${currentUser.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(treeData),
+        });
+        if (!response.ok) {
+          console.error('Failed to update network node');
+        }
+      } catch (error) {
+        console.error('Error updating network node:', error);
+      }
+
+      // Update network stats via API
+      try {
+        const response = await fetch(`/api/db/stats/network/${currentUser.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(networkStats),
+        });
+        if (!response.ok) {
+          console.error('Failed to update network stats');
+        }
+      } catch (error) {
+        console.error('Error updating network stats:', error);
+      }
       
       // Set state
       setNetworkData(treeData);
-      setStats(updatedStats);
+      setStats(networkStats);
       setNetworkMembers(network);
       setReferralCode(currentUser.referralCode);
       setCurrentUser(currentUser);
       
       // Also update the stats in storage
-      setToStorage(`${STORAGE_KEYS.NETWORK_STATS}_${currentUser.id}`, updatedStats);
+      // setToStorage(`${STORAGE_KEYS.NETWORK_STATS}_${currentUser.id}`, updatedStats);
       
       // Find referrer
       if (currentUser.sponsorId) {
@@ -341,8 +385,56 @@ const Network: React.FC = () => {
       fetchData();
     }, 1000);
   };
+
+  // const createMockReferral = async () => {
+  //   if (!currentUser) return;
+  
+  //   setIsLoading(true);
+  
+  //   try {
+  //     const mockUser: User = {
+  //       id: Math.random().toString(36).substring(2, 15),
+  //       name: `Test User ${Math.floor(Math.random() * 1000)}`,
+  //       email: `test${Math.floor(Math.random() * 1000)}@example.com`,
+  //       phone: `555-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+  //       address: "123 Test Street, Test City",
+  //       sponsorId: currentUser.referralCode.toUpperCase(), // Referral logic
+  //       referralCode: `TEST${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+  //       registrationDate: new Date().toISOString(),
+  //       kycStatus: 'pending',
+  //       kycDocuments: {},
+  //       bankDetails: {
+  //         accountName: "",
+  //         accountNumber: "",
+  //         bankName: "",
+  //         ifscCode: ""
+  //       },
+  //       profilePicture: ""
+  //     };
+  
+  //     const res = await fetch("/api/network/user/create", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify(mockUser)
+  //     });
+  
+  //     if (!res.ok) {
+  //       throw new Error("Failed to create mock referral");
+  //     }
+  
+  //     console.log(`Mock user ${mockUser.name} created via backend`);
+      
+  //     // Re-fetch updated network data
+  //     await fetchData();
+  //   } catch (error) {
+  //     console.error("Error creating mock referral:", error);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
   
   // Function to set up a test relationship between existing users
+  
   const setupExistingUserRelationship = () => {
     if (!currentUser) return;
     
@@ -431,6 +523,72 @@ const Network: React.FC = () => {
       alert(`${otherUser.name} has been added as your direct referral!`);
     }, 1000);
   };
+
+  // const setupExistingUserRelationship = async () => {
+  //   if (!currentUser) return;
+  
+  //   setIsLoading(true);
+  
+  //   try {
+  //     // 1. Fetch all users from backend
+  //     const usersRes = await fetch('/api/users');
+  //     if (!usersRes.ok) throw new Error('Failed to fetch users');
+  //     const allUsers: User[] = await usersRes.json();
+  
+  //     // 2. Find an eligible user
+  //     const otherUser = allUsers.find(user =>
+  //       user.id !== currentUser.id &&
+  //       user.sponsorId !== currentUser.referralCode
+  //     );
+  
+  //     if (!otherUser) {
+  //       alert("No other users found to set as a referral");
+  //       return;
+  //     }
+  
+  //     console.log(`Assigning ${otherUser.name} under ${currentUser.name}`);
+  
+  //     // 3. Update the other user's sponsorId
+  //     const patchRes = await fetch(`/api/users/${otherUser.id}`, {
+  //       method: 'PATCH',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({ sponsorId: currentUser.referralCode.toUpperCase() })
+  //     });
+  
+  //     if (!patchRes.ok) throw new Error("Failed to update user's sponsorId");
+  
+  //     // 4. Update the MLM network tree
+  //     const networkPayload = {
+  //       sponsorId: currentUser.id,
+  //       child: {
+  //         id: otherUser.id,
+  //         name: otherUser.name,
+  //         profilePicture: otherUser.profilePicture || '',
+  //         referralCode: otherUser.referralCode,
+  //         joinDate: otherUser.registrationDate,
+  //         active: true
+  //       }
+  //     };
+  
+  //     const networkRes = await fetch('/api/network', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify(networkPayload)
+  //     });
+  
+  //     if (!networkRes.ok) throw new Error('Failed to update network data');
+  
+  //     // 5. Refresh updated data
+  //     await fetchData();
+  
+  //     alert(`${otherUser.name} has been added as your direct referral!`);
+  //   } catch (error) {
+  //     console.error('Error:', error);
+  //     alert("Something went wrong while setting up the referral.");
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
   
   if (isLoading || !stats) {
     return (
