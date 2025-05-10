@@ -390,53 +390,6 @@ const Network: React.FC = () => {
         </MainLayout>
       );
     }
-
-  const createMockReferral = async () => {
-    if (!currentUser) return;
-  
-    setIsLoading(true);
-  
-    try {
-      const mockUser: User = {
-        id: Math.random().toString(36).substring(2, 15),
-        name: `Test User ${Math.floor(Math.random() * 1000)}`,
-        email: `test${Math.floor(Math.random() * 1000)}@example.com`,
-        phone: `555-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
-        address: "123 Test Street, Test City",
-        sponsorId: currentUser.referralCode.toUpperCase(), // Referral logic
-        referralCode: `TEST${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
-        registrationDate: new Date().toISOString(),
-        kycStatus: 'pending',
-        kycDocuments: {},
-        bankDetails: {
-          accountName: "",
-          accountNumber: "",
-          bankName: "",
-          ifscCode: ""
-        },
-        profilePicture: ""
-      };
-  
-      const res = await fetch(`${serverUrl}/api/network/user/create`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(mockUser)
-      });
-  
-      if (!res.ok) {
-        throw new Error("Failed to create mock referral");
-      }
-  
-      console.log(`Mock user ${mockUser.name} created via backend`);
-      
-      // Re-fetch updated network data
-      await fetchData();
-    } catch (error) {
-      console.error("Error creating mock referral:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
   
   // Function to set up a test relationship between existing users
   
