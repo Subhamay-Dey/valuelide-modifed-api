@@ -26,7 +26,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <Link to="/admin/dashboard" className="flex items-center">
-                <span className="text-xl font-bold text-primary-600">MLM Portal</span>
+                <span className="text-xl font-bold text-primary-600">VL Portal</span>
                 <span className="ml-2 bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded-md">
                   Admin
                 </span>

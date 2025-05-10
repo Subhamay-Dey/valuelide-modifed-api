@@ -76,7 +76,7 @@ const Header: React.FC = () => {
                   />
                 </svg>
               </div>
-              <span className="ml-2 text-xl font-bold text-neutral-900">MLM Portal</span>
+              <span className="ml-2 text-xl font-bold text-neutral-900">VL Portal</span>
             </Link>
           </div>
 

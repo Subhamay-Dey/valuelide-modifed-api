@@ -62,10 +62,10 @@ const Register: React.FC = () => {
 
   // If referral code is provided in URL, try to find the referrer
   useEffect(() => {
-    const findReferrer = () => {
+    const findReferrer = async () => {
       if (referralCode) {
         console.log("Found referral code in URL:", referralCode);
-        const users = getAllUsers();
+        const users = await getAllUsers();
         const foundReferrer = users.find(user => user.referralCode.toUpperCase() === referralCode.toUpperCase());
 
         if (foundReferrer) {
