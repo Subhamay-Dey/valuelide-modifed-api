@@ -187,6 +187,114 @@ const Network: React.FC = () => {
       // Get stats from both sources to ensure we have the most up-to-date info
       // const userNetworkStats = getUserNetworkStats(currentUser.id);
 
+      // Fetch network stats from API
+      let userNetworkStats: Partial<NetworkStats> = {};
+      try {
+        const response = await fetch(`${serverUrl}/api/db/stats/network/${currentUser.id}`);
+        if (response.ok) {
+          userNetworkStats = await response.json();
+        } else {
+          console.error('Failed to fetch network stats');
+        }
+      } catch (error) {
+        console.error('Error fetching network stats:', error);
+      }
+      
+      // Calculate updated stats
+      const directRefCount = Math.max(
+        userNetworkStats.directReferrals || 0,
+        directReferrals.length
+      );
+      
+      setNetworkStats({
+        dailyGrowth: userNetworkStats.dailyGrowth ?? [],
+        weeklyGrowth: userNetworkStats.weeklyGrowth ?? [],
+        monthlyGrowth: userNetworkStats.monthlyGrowth ?? [],
+        totalMembers: network.length,
+        directReferrals: directRefCount,
+        activeMembers: network.length,
+        inactiveMembers: 0,
+        levelWiseCount: {
+          1: directReferrals.length,
+          2: indirectReferrals.length,
+          3: 0
+        }
+      });
+  
+
+      // Update network node via API
+      try {
+        const response = await fetch(`${serverUrl}/api/db/network/${currentUser.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(treeData),
+        });
+        if (!response.ok) {
+          console.error('Failed to update network node');
+        }
+      } catch (error) {
+        console.error('Error updating network node:', error);
+      }
+
+      // Update network stats via API
+      try {
+        const response = await fetch(`${serverUrl}/api/db/stats/network/${currentUser.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(networkStats),
+        });
+        if (!response.ok) {
+          console.error('Failed to update network stats');
+        }
+      } catch (error) {
+        console.error('Error updating network stats:', error);
+      }
+      
+      // Set state
+      setNetworkData(treeData);
+      setStats(networkStats);
+      setNetworkMembers(network);
+      setReferralCode(currentUser.referralCode);
+      setCurrentUser(currentUser);
+      
+      // Also update the stats in storage
+      // setToStorage(`${STORAGE_KEYS.NETWORK_STATS}_${currentUser.id}`, updatedStats);
+      
+      // Find referrer
+      if (currentUser.sponsorId) {
+        console.log("Looking for referrer with referral code:", currentUser.sponsorId);
+        const foundReferrer = allUsers.find(u => 
+          u.referralCode && u.referralCode.toUpperCase() === currentUser.sponsorId?.toUpperCase()
+        );
+        if (foundReferrer) {
+          console.log("Referrer found:", foundReferrer.name);
+          setReferrer(foundReferrer);
+        } else {
+          console.log("Referrer not found for sponsorId:", currentUser.sponsorId);
+        }
+      }
+    }
+    
+    setIsLoading(false);
+  };
+  
+  useEffect(() => {
+    fetchData();
+  }, []);
+  
+  // Check KYC status
+  if (currentUser && currentUser.kycStatus !== 'approved') {
+    return (
+      <MainLayout>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-neutral-900">My Network</h1>
+          <p className="text-neutral-600">View your team structure and referrals</p>
+        </div>
+        
+        <KycRequired featureName="My Network" />
+      </MainLayout>
+    );
+  }
 
   
   
@@ -283,232 +391,6 @@ const Network: React.FC = () => {
   //     fetchData();
   //   }, 1000);
   // };
-
-    // Define fetchData function
-    const fetchData = async () => {
-      setIsLoading(true);
-      
-      // Get current user
-      const currentUser = getCurrentUser();
-      if (currentUser) {
-        console.log("Fetching network data for user:", currentUser.name, "with referral code:", currentUser.referralCode);
-        
-        // Calculate network structure
-        const allUsers = getAllUsers();
-        console.log("Total users in system:", allUsers.length);
-        
-        // Log all users' referral codes and sponsors for debugging
-        console.log("All users' referral codes and sponsor IDs:");
-        allUsers.forEach(u => {
-          console.log(`- ${u.name}: Referral Code=${u.referralCode}, SponsorId=${u.sponsorId || "NONE"}`);
-        });
-        
-        // Find direct referrals (level 1) - these are users who have the current user's referral code as their sponsorId
-        const directReferrals = allUsers.filter(u => 
-          u.sponsorId && u.sponsorId.toUpperCase() === currentUser.referralCode.toUpperCase()
-        );
-        console.log("Direct referrals found:", directReferrals.length);
-        
-        if (directReferrals.length > 0) {
-          console.log("First direct referral:", directReferrals[0].name, "with sponsorId:", directReferrals[0].sponsorId);
-        }
-        
-        // Create list of users who have used this user's referral code
-        const usersWithReferralCode = allUsers.filter(u => 
-          u.sponsorId && u.sponsorId.toUpperCase() === currentUser.referralCode.toUpperCase()
-        ).map(user => {
-          // Check if this user has any downline members
-          const hasDownline = allUsers.some(downlineUser => 
-            downlineUser.sponsorId && downlineUser.sponsorId.toUpperCase() === user.referralCode.toUpperCase()
-          );
-          
-          return {
-            id: user.id,
-            name: user.name,
-            registrationDate: user.registrationDate,
-            hasDownline
-          };
-        });
-        
-        setReferralUsers(usersWithReferralCode);
-        console.log(`Found ${usersWithReferralCode.length} users who used referral code ${currentUser.referralCode}`);
-        
-        // Always rebuild the network structure - don't rely on stored data
-        // This ensures we always have the latest network structure
-        
-        // Find indirect referrals (level 2)
-        const indirectReferrals: NetworkMemberWithLevel[] = [];
-        directReferrals.forEach(directRef => {
-          console.log(`Looking for level 2 referrals under ${directRef.name} with referral code ${directRef.referralCode}`);
-          const level2Members = allUsers.filter(u => 
-            u.sponsorId && u.sponsorId.toUpperCase() === directRef.referralCode.toUpperCase()
-          );
-          console.log(`Found ${level2Members.length} level 2 members under ${directRef.name}`);
-          
-          indirectReferrals.push(
-            ...level2Members.map(member => ({
-              id: member.id,
-              name: member.name,
-              profilePicture: member.profilePicture || '',
-              referralCode: member.referralCode,
-              joinDate: member.registrationDate,
-              level: 2,
-              active: true,
-              children: []
-            }))
-          );
-        });
-        
-        // Combine direct and indirect referrals
-        const network = [
-          ...directReferrals.map(member => ({
-            id: member.id,
-            name: member.name,
-            profilePicture: member.profilePicture || '',
-            referralCode: member.referralCode,
-            joinDate: member.registrationDate,
-            level: 1,
-            active: true,
-            children: []
-          })),
-          ...indirectReferrals
-        ];
-        
-        // Create hierarchical structure for tree view
-        const treeData: NetworkMember = {
-          id: currentUser.id,
-          name: currentUser.name,
-          profilePicture: currentUser.profilePicture || '',
-          referralCode: currentUser.referralCode,
-          joinDate: currentUser.registrationDate,
-          active: true,
-          children: directReferrals.map(directRef => {
-            // Find level 2 children for this direct referral
-            const level2Children = allUsers.filter(u => 
-              u.sponsorId && u.sponsorId.toUpperCase() === directRef.referralCode.toUpperCase()
-            );
-            
-            return {
-              id: directRef.id,
-              name: directRef.name,
-              profilePicture: directRef.profilePicture || '',
-              referralCode: directRef.referralCode,
-              joinDate: directRef.registrationDate,
-              active: true,
-              children: level2Children.map(l2 => ({
-                id: l2.id,
-                name: l2.name,
-                profilePicture: l2.profilePicture || '',
-                referralCode: l2.referralCode,
-                joinDate: l2.registrationDate,
-                active: true,
-                children: []
-              }))
-            };
-          })
-        };
-        
-        console.log("Network tree structure created with root:", treeData.name);
-        console.log("Direct children in tree:", treeData.children?.length || 0);
-        
-        // Update the user's network data in storage with what we've calculated
-        // const userNetworkKey = `mlm_network_members_${currentUser.id}`;
-        // setToStorage(userNetworkKey, treeData);
-        // console.log(`Updated user's network data at key: ${userNetworkKey}`);
-        
-        // Get stats from both sources to ensure we have the most up-to-date info
-        // const userNetworkStats = getUserNetworkStats(currentUser.id);
-  
-        // Fetch network stats from API
-        let userNetworkStats: Partial<NetworkStats> = {};
-        try {
-          const response = await fetch(`${serverUrl}/api/db/stats/network/${currentUser.id}`);
-          if (response.ok) {
-            userNetworkStats = await response.json();
-          } else {
-            console.error('Failed to fetch network stats');
-          }
-        } catch (error) {
-          console.error('Error fetching network stats:', error);
-        }
-        
-        // Calculate updated stats
-        const directRefCount = Math.max(
-          userNetworkStats.directReferrals || 0,
-          directReferrals.length
-        );
-        
-        setNetworkStats({
-          dailyGrowth: userNetworkStats.dailyGrowth ?? [],
-          weeklyGrowth: userNetworkStats.weeklyGrowth ?? [],
-          monthlyGrowth: userNetworkStats.monthlyGrowth ?? [],
-          totalMembers: network.length,
-          directReferrals: directRefCount,
-          activeMembers: network.length,
-          inactiveMembers: 0,
-          levelWiseCount: {
-            1: directReferrals.length,
-            2: indirectReferrals.length,
-            3: 0
-          }
-        });
-    
-  
-        // Update network node via API
-        try {
-          const response = await fetch(`${serverUrl}/api/db/network/${currentUser.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(treeData),
-          });
-          if (!response.ok) {
-            console.error('Failed to update network node');
-          }
-        } catch (error) {
-          console.error('Error updating network node:', error);
-        }
-  
-        // Update network stats via API
-        try {
-          const response = await fetch(`${serverUrl}/api/db/stats/network/${currentUser.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(networkStats),
-          });
-          if (!response.ok) {
-            console.error('Failed to update network stats');
-          }
-        } catch (error) {
-          console.error('Error updating network stats:', error);
-        }
-        
-        // Set state
-        setNetworkData(treeData);
-        setStats(networkStats);
-        setNetworkMembers(network);
-        setReferralCode(currentUser.referralCode);
-        setCurrentUser(currentUser);
-        
-        // Also update the stats in storage
-        // setToStorage(`${STORAGE_KEYS.NETWORK_STATS}_${currentUser.id}`, updatedStats);
-        
-        // Find referrer
-        if (currentUser.sponsorId) {
-          console.log("Looking for referrer with referral code:", currentUser.sponsorId);
-          const foundReferrer = allUsers.find(u => 
-            u.referralCode && u.referralCode.toUpperCase() === currentUser.sponsorId?.toUpperCase()
-          );
-          if (foundReferrer) {
-            console.log("Referrer found:", foundReferrer.name);
-            setReferrer(foundReferrer);
-          } else {
-            console.log("Referrer not found for sponsorId:", currentUser.sponsorId);
-          }
-        }
-      }
-      
-      setIsLoading(false);
-    };
     
     useEffect(() => {
       fetchData();
