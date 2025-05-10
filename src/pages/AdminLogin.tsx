@@ -87,7 +87,7 @@ const AdminLogin: React.FC = () => {
         {/* Left: Login Section */}
         <div className="w-full max-w-sm flex flex-col items-center">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-yellow-400 via-green-400 via-blue-400 to-purple-500 animate-gradient-x drop-shadow-lg animate-pulse-rainbow">MLM Portal Admin</h1>
+            <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-yellow-400 via-green-400 via-blue-400 to-purple-500 animate-gradient-x drop-shadow-lg animate-pulse-rainbow">VL Portal Admin</h1>
             <p className="text-lg font-medium text-neutral-500 mt-2">Admin Panel Access</p>
           </div>
           <Card className="bg-white/70 backdrop-blur-lg rounded-2xl shadow-xl w-full border border-blue-100 floating-card rainbow-border-glow animate-card-pop">
