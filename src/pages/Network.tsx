@@ -54,98 +54,98 @@ const Network: React.FC = () => {
   
   
   // Function to create a mock referral for demonstration purposes
-  const createMockReferral = () => {
-    if (!currentUser) return;
+  // const createMockReferral = () => {
+  //   if (!currentUser) return;
     
-    // Show loading state
-    setIsLoading(true);
+  //   // Show loading state
+  //   setIsLoading(true);
     
-    // Set a timeout to simulate network latency
-    setTimeout(() => {
-      // Create a new random user as a direct referral
-      const mockUser: User = {
-        id: Math.random().toString(36).substring(2, 15),
-        name: `Test User ${Math.floor(Math.random() * 1000)}`,
-        email: `test${Math.floor(Math.random() * 1000)}@example.com`,
-        phone: `555-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
-        address: "123 Test Street, Test City",
-        sponsorId: currentUser.referralCode.toUpperCase(), // Use referral code as sponsor ID, ensure it's uppercase
-        referralCode: `TEST${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
-        registrationDate: new Date().toISOString(),
-        kycStatus: 'pending',
-        kycDocuments: {},
-        bankDetails: {
-          accountName: "",
-          accountNumber: "",
-          bankName: "",
-          ifscCode: ""
-        },
-        profilePicture: ""
-      };
+  //   // Set a timeout to simulate network latency
+  //   setTimeout(() => {
+  //     // Create a new random user as a direct referral
+  //     const mockUser: User = {
+  //       id: Math.random().toString(36).substring(2, 15),
+  //       name: `Test User ${Math.floor(Math.random() * 1000)}`,
+  //       email: `test${Math.floor(Math.random() * 1000)}@example.com`,
+  //       phone: `555-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+  //       address: "123 Test Street, Test City",
+  //       sponsorId: currentUser.referralCode.toUpperCase(), // Use referral code as sponsor ID, ensure it's uppercase
+  //       referralCode: `TEST${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+  //       registrationDate: new Date().toISOString(),
+  //       kycStatus: 'pending',
+  //       kycDocuments: {},
+  //       bankDetails: {
+  //         accountName: "",
+  //         accountNumber: "",
+  //         bankName: "",
+  //         ifscCode: ""
+  //       },
+  //       profilePicture: ""
+  //     };
       
-      console.log(`Creating mock user ${mockUser.name} with referral code ${mockUser.referralCode}`);
-      console.log(`Mock user's sponsor ID: ${mockUser.sponsorId}`);
+  //     console.log(`Creating mock user ${mockUser.name} with referral code ${mockUser.referralCode}`);
+  //     console.log(`Mock user's sponsor ID: ${mockUser.sponsorId}`);
       
-      // First, add the user to the users array
-      const allUsers = getAllUsers();
-      allUsers.push(mockUser);
-      setToStorage(STORAGE_KEYS.USERS, allUsers);
+  //     // First, add the user to the users array
+  //     const allUsers = getAllUsers();
+  //     allUsers.push(mockUser);
+  //     setToStorage(STORAGE_KEYS.USERS, allUsers);
       
-      // Now manually update the network structures to ensure immediate visibility
+  //     // Now manually update the network structures to ensure immediate visibility
       
-      // 1. Get the current user's network data
-      const userNetworkKey = `mlm_network_members_${currentUser.id}`;
-      const networkData = getFromStorage<NetworkMember>(userNetworkKey) || {
-        id: currentUser.id,
-        name: currentUser.name,
-        profilePicture: currentUser.profilePicture || '',
-        referralCode: currentUser.referralCode,
-        joinDate: currentUser.registrationDate,
-        active: true,
-        children: []
-      };
+  //     // 1. Get the current user's network data
+  //     const userNetworkKey = `mlm_network_members_${currentUser.id}`;
+  //     const networkData = getFromStorage<NetworkMember>(userNetworkKey) || {
+  //       id: currentUser.id,
+  //       name: currentUser.name,
+  //       profilePicture: currentUser.profilePicture || '',
+  //       referralCode: currentUser.referralCode,
+  //       joinDate: currentUser.registrationDate,
+  //       active: true,
+  //       children: []
+  //     };
       
-      // 2. Make sure children array exists
-      if (!networkData.children) {
-        networkData.children = [];
-      }
+  //     // 2. Make sure children array exists
+  //     if (!networkData.children) {
+  //       networkData.children = [];
+  //     }
       
-      // 3. Add this mock user as a direct child
-      const childMember = {
-        id: mockUser.id,
-        name: mockUser.name,
-        profilePicture: mockUser.profilePicture || '',
-        referralCode: mockUser.referralCode,
-        joinDate: mockUser.registrationDate,
-        active: true,
-        children: []
-      };
+  //     // 3. Add this mock user as a direct child
+  //     const childMember = {
+  //       id: mockUser.id,
+  //       name: mockUser.name,
+  //       profilePicture: mockUser.profilePicture || '',
+  //       referralCode: mockUser.referralCode,
+  //       joinDate: mockUser.registrationDate,
+  //       active: true,
+  //       children: []
+  //     };
       
-      // Check if this child already exists to avoid duplicates
-      const existingChildIndex = networkData.children.findIndex(child => 
-        child.id === mockUser.id || child.referralCode === mockUser.referralCode
-      );
+  //     // Check if this child already exists to avoid duplicates
+  //     const existingChildIndex = networkData.children.findIndex(child => 
+  //       child.id === mockUser.id || child.referralCode === mockUser.referralCode
+  //     );
       
-      if (existingChildIndex >= 0) {
-        networkData.children[existingChildIndex] = childMember;
-      } else {
-        networkData.children.push(childMember);
-      }
+  //     if (existingChildIndex >= 0) {
+  //       networkData.children[existingChildIndex] = childMember;
+  //     } else {
+  //       networkData.children.push(childMember);
+  //     }
       
-      // 4. Save the updated network data
-      setToStorage(userNetworkKey, networkData);
+  //     // 4. Save the updated network data
+  //     setToStorage(userNetworkKey, networkData);
       
-      console.log(`Updated network data for ${currentUser.name} at key: ${userNetworkKey}`);
-      console.log(`Network children count is now: ${networkData.children?.length || 0}`);
+  //     console.log(`Updated network data for ${currentUser.name} at key: ${userNetworkKey}`);
+  //     console.log(`Network children count is now: ${networkData.children?.length || 0}`);
       
-      // 5. Also use the utility function for completeness
-      // (This might update network stats and other structures)
-      addNewUserWithData(mockUser);
+  //     // 5. Also use the utility function for completeness
+  //     // (This might update network stats and other structures)
+  //     addNewUserWithData(mockUser);
       
-      // Refresh data to show the changes
-      fetchData();
-    }, 1000);
-  };
+  //     // Refresh data to show the changes
+  //     fetchData();
+  //   }, 1000);
+  // };
 
     // Define fetchData function
     const fetchData = async () => {
