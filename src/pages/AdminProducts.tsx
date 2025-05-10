@@ -5,12 +5,12 @@ import AdminLayout from '../components/layout/AdminLayout';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
-import { 
-  Product, 
-  getAllProducts, 
-  addProduct, 
-  updateProduct, 
-  deleteProduct 
+import {
+  Product,
+  getAllProducts,
+  addProduct,
+  updateProduct,
+  deleteProduct
 } from '../utils/productService';
 import { formatCurrency } from '../utils/currencyFormatter';
 
@@ -40,8 +40,8 @@ const AdminProducts: React.FC = () => {
     loadProducts();
   }, []);
 
-  const loadProducts = () => {
-    const allProducts = getAllProducts();
+  const loadProducts = async () => {
+    const allProducts = await getAllProducts();
     setProducts(allProducts);
   };
 
@@ -49,9 +49,9 @@ const AdminProducts: React.FC = () => {
     setEditingProduct({ ...product });
   };
 
-  const handleUpdateProduct = () => {
+  const handleUpdateProduct = async () => {
     if (editingProduct) {
-      const updated = updateProduct(editingProduct);
+      const updated = await updateProduct(editingProduct);
       if (updated) {
         loadProducts();
         setEditingProduct(null);
@@ -59,17 +59,17 @@ const AdminProducts: React.FC = () => {
     }
   };
 
-  const handleDeleteProduct = (productId: string) => {
+  const handleDeleteProduct = async (productId: string) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
-      const isDeleted = deleteProduct(productId);
+      const isDeleted = await deleteProduct(productId);
       if (isDeleted) {
         loadProducts();
       }
     }
   };
 
-  const handleAddProduct = () => {
-    const addedProduct = addProduct(newProduct);
+  const handleAddProduct = async () => {
+    const addedProduct = await addProduct(newProduct);
     if (addedProduct) {
       loadProducts();
       setShowAddForm(false);
@@ -104,7 +104,7 @@ const AdminProducts: React.FC = () => {
         <div className="absolute right-1/4 bottom-10 w-56 h-56 bg-gradient-to-tr from-blue-200 via-green-200 to-pink-300 rounded-full filter blur-2xl opacity-30 animate-blob-fast animation-delay-3000"></div>
         <div className="absolute left-1/2 top-1/3 w-24 h-24 bg-gradient-to-br from-yellow-200 via-pink-200 to-blue-200 rounded-full filter blur-lg opacity-40 animate-blob animation-delay-1000"></div>
         <div className="absolute right-1/3 bottom-1/4 w-16 h-16 bg-gradient-to-tr from-green-200 via-blue-200 to-purple-200 rounded-full filter blur-lg opacity-30 animate-blob animation-delay-2500"></div>
-        <div className="fixed inset-0 animate-bg-gradient-vivid" style={{background: 'linear-gradient(120deg, rgba(255,0,150,0.18), rgba(0,229,255,0.15), rgba(255,255,0,0.13), rgba(0,255,128,0.12))'}}></div>
+        <div className="fixed inset-0 animate-bg-gradient-vivid" style={{ background: 'linear-gradient(120deg, rgba(255,0,150,0.18), rgba(0,229,255,0.15), rgba(255,255,0,0.13), rgba(0,255,128,0.12))' }}></div>
       </div>
       <div className="flex justify-between items-center mb-6 relative z-10">
         <div>
@@ -139,48 +139,48 @@ const AdminProducts: React.FC = () => {
             <Input
               label="Product Name"
               value={newProduct.name}
-              onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+              onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
               placeholder="Enter product name"
               required
             />
-            
+
             <Input
               label="Price ($)"
               type="number"
               min="0"
               step="0.01"
               value={newProduct.price}
-              onChange={(e) => setNewProduct({...newProduct, price: parseFloat(e.target.value)})}
+              onChange={(e) => setNewProduct({ ...newProduct, price: parseFloat(e.target.value) })}
               placeholder="Enter price"
               required
             />
-            
+
             <div className="md:col-span-2">
               <Input
                 label="Description"
                 value={newProduct.description}
-                onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
                 placeholder="Enter product description"
               />
             </div>
-            
+
             <Input
               label="Commission Rate (%)"
               type="number"
               min="0"
               max="100"
               value={newProduct.commissionRate}
-              onChange={(e) => setNewProduct({...newProduct, commissionRate: parseFloat(e.target.value)})}
+              onChange={(e) => setNewProduct({ ...newProduct, commissionRate: parseFloat(e.target.value) })}
               placeholder="Enter commission rate"
               required
             />
-            
+
             <div className="flex items-center mt-6">
               <input
                 type="checkbox"
                 id="active"
                 checked={newProduct.active}
-                onChange={(e) => setNewProduct({...newProduct, active: e.target.checked})}
+                onChange={(e) => setNewProduct({ ...newProduct, active: e.target.checked })}
                 className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
               />
               <label htmlFor="active" className="ml-2 text-sm font-medium text-neutral-700">
@@ -236,7 +236,7 @@ const AdminProducts: React.FC = () => {
                       <td className="px-6 py-4">
                         <Input
                           value={editingProduct.name}
-                          onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})}
+                          onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
                           className="mb-0"
                         />
                       </td>
@@ -246,7 +246,7 @@ const AdminProducts: React.FC = () => {
                           min="0"
                           step="0.01"
                           value={editingProduct.price}
-                          onChange={(e) => setEditingProduct({...editingProduct, price: parseFloat(e.target.value)})}
+                          onChange={(e) => setEditingProduct({ ...editingProduct, price: parseFloat(e.target.value) })}
                           className="mb-0"
                         />
                       </td>
@@ -256,7 +256,7 @@ const AdminProducts: React.FC = () => {
                           min="0"
                           max="100"
                           value={editingProduct.commissionRate}
-                          onChange={(e) => setEditingProduct({...editingProduct, commissionRate: parseFloat(e.target.value)})}
+                          onChange={(e) => setEditingProduct({ ...editingProduct, commissionRate: parseFloat(e.target.value) })}
                           className="mb-0"
                         />
                       </td>
@@ -265,7 +265,7 @@ const AdminProducts: React.FC = () => {
                           <input
                             type="checkbox"
                             checked={editingProduct.active}
-                            onChange={(e) => setEditingProduct({...editingProduct, active: e.target.checked})}
+                            onChange={(e) => setEditingProduct({ ...editingProduct, active: e.target.checked })}
                             className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
                           />
                           <label className="ml-2 text-sm font-medium text-neutral-700">
