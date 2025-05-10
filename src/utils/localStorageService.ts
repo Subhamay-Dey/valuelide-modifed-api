@@ -768,7 +768,7 @@ export const getAllUsersForAdmin = (): User[] => {
   return getFromStorage<User[]>(STORAGE_KEYS.USERS) || [];
 };
 
-export const deleteUser = (userId: string): boolean => {
+export const deleteUser = async (userId: string): boolean => {
   try {
     // Get all users
     const users = getAllUsersForAdmin();
