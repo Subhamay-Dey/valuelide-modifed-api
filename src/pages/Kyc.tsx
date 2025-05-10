@@ -173,8 +173,10 @@ const Kyc: React.FC = () => {
         submittedAt: new Date().toISOString()
       };
 
-      addKycSubmission(newSubmission);
+      await addKycSubmission(newSubmission);
       setSubmissionHistory(prev => [...prev, newSubmission]);
+
+      alert("New Kyc Uploaded!");
 
       // Set KYC status to pending if it was rejected
       if (kycStatus === 'rejected') {
