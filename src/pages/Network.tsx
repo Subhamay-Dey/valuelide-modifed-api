@@ -50,7 +50,6 @@ const Network: React.FC = () => {
   const [networkMembers, setNetworkMembers] = useState<NetworkMemberWithLevel[]>([]);
   const [referralUsers, setReferralUsers] = useState<ReferralUser[]>([]);
   const [networkStats, setNetworkStats] = useState<NetworkStats | null>(null);
-
   
   // Define fetchData function
   const fetchData = async () => {
@@ -191,8 +190,7 @@ const Network: React.FC = () => {
       let userNetworkStats: Partial<NetworkStats> = {};
       try {
         const response = await fetch(`${serverUrl}/api/db/stats/network/${currentUser.id}`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
+          method: 'GET',
         });
         if (response.ok) {
           userNetworkStats = await response.json();
