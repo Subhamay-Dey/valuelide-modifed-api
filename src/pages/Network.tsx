@@ -52,6 +52,143 @@ const Network: React.FC = () => {
   const [networkStats, setNetworkStats] = useState<NetworkStats | null>(null);
 
   
+  // Define fetchData function
+  const fetchData = async () => {
+    setIsLoading(true);
+    
+    // Get current user
+    const currentUser = getCurrentUser();
+    if (currentUser) {
+      console.log("Fetching network data for user:", currentUser.name, "with referral code:", currentUser.referralCode);
+      
+      // Calculate network structure
+      const allUsers = await getAllUsers();
+      console.log("Total users in system:", allUsers.length);
+      
+      // Log all users' referral codes and sponsors for debugging
+      console.log("All users' referral codes and sponsor IDs:");
+      allUsers.forEach(u => {
+        console.log(`- ${u.name}: Referral Code=${u.referralCode}, SponsorId=${u.sponsorId || "NONE"}`);
+      });
+      
+      // Find direct referrals (level 1) - these are users who have the current user's referral code as their sponsorId
+      const directReferrals = await allUsers.filter(u => 
+        u.sponsorId && u.sponsorId.toUpperCase() === currentUser.referralCode.toUpperCase()
+      );
+      console.log("Direct referrals found:", directReferrals.length);
+      
+      if (directReferrals.length > 0) {
+        console.log("First direct referral:", directReferrals[0].name, "with sponsorId:", directReferrals[0].sponsorId);
+      }
+      
+      // Create list of users who have used this user's referral code
+      const usersWithReferralCode = allUsers.filter(u => 
+        u.sponsorId && u.sponsorId.toUpperCase() === currentUser.referralCode.toUpperCase()
+      ).map(user => {
+        // Check if this user has any downline members
+        const hasDownline = allUsers.some(downlineUser => 
+          downlineUser.sponsorId && downlineUser.sponsorId.toUpperCase() === user.referralCode.toUpperCase()
+        );
+        
+        return {
+          id: user.id,
+          name: user.name,
+          registrationDate: user.registrationDate,
+          hasDownline
+        };
+      });
+      
+      setReferralUsers(usersWithReferralCode);
+      console.log(`Found ${usersWithReferralCode.length} users who used referral code ${currentUser.referralCode}`);
+      
+      // Always rebuild the network structure - don't rely on stored data
+      // This ensures we always have the latest network structure
+      
+      // Find indirect referrals (level 2)
+      const indirectReferrals: NetworkMemberWithLevel[] = [];
+      directReferrals.forEach(directRef => {
+        console.log(`Looking for level 2 referrals under ${directRef.name} with referral code ${directRef.referralCode}`);
+        const level2Members = allUsers.filter(u => 
+          u.sponsorId && u.sponsorId.toUpperCase() === directRef.referralCode.toUpperCase()
+        );
+        console.log(`Found ${level2Members.length} level 2 members under ${directRef.name}`);
+        
+        indirectReferrals.push(
+          ...level2Members.map(member => ({
+            id: member.id,
+            name: member.name,
+            profilePicture: member.profilePicture || '',
+            referralCode: member.referralCode,
+            joinDate: member.registrationDate,
+            level: 2,
+            active: true,
+            children: []
+          }))
+        );
+      });
+      
+      // Combine direct and indirect referrals
+      const network = [
+        ...directReferrals.map(member => ({
+          id: member.id,
+          name: member.name,
+          profilePicture: member.profilePicture || '',
+          referralCode: member.referralCode,
+          joinDate: member.registrationDate,
+          level: 1,
+          active: true,
+          children: []
+        })),
+        ...indirectReferrals
+      ];
+      
+      // Create hierarchical structure for tree view
+      const treeData: NetworkMember = {
+        id: currentUser.id,
+        name: currentUser.name,
+        profilePicture: currentUser.profilePicture || '',
+        referralCode: currentUser.referralCode,
+        joinDate: currentUser.registrationDate,
+        active: true,
+        children: directReferrals.map(directRef => {
+          // Find level 2 children for this direct referral
+          const level2Children = allUsers.filter(u => 
+            u.sponsorId && u.sponsorId.toUpperCase() === directRef.referralCode.toUpperCase()
+          );
+          
+          return {
+            id: directRef.id,
+            name: directRef.name,
+            profilePicture: directRef.profilePicture || '',
+            referralCode: directRef.referralCode,
+            joinDate: directRef.registrationDate,
+            active: true,
+            children: level2Children.map(l2 => ({
+              id: l2.id,
+              name: l2.name,
+              profilePicture: l2.profilePicture || '',
+              referralCode: l2.referralCode,
+              joinDate: l2.registrationDate,
+              active: true,
+              children: []
+            }))
+          };
+        })
+      };
+      
+      console.log("Network tree structure created with root:", treeData.name);
+      console.log("Direct children in tree:", treeData.children?.length || 0);
+      
+      // Update the user's network data in storage with what we've calculated
+      // const userNetworkKey = `mlm_network_members_${currentUser.id}`;
+      // setToStorage(userNetworkKey, treeData);
+      // console.log(`Updated user's network data at key: ${userNetworkKey}`);
+      
+      // Get stats from both sources to ensure we have the most up-to-date info
+      // const userNetworkStats = getUserNetworkStats(currentUser.id);
+
+
+  
   
   // Function to create a mock referral for demonstration purposes
   const createMockReferral = () => {

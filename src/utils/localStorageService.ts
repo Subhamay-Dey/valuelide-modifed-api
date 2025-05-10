@@ -232,7 +232,7 @@ export const updateCurrentUser = (user: User): void => {
   setToStorage(STORAGE_KEYS.USERS, updatedUsers);
 };
 
-export const getAllUsers = async (): User[] => {
+export const getAllUsers = async (): Promise<User[]> => {
   // return getFromStorage<User[]>(STORAGE_KEYS.USERS) || [];
   const allUsers = await apiCall('get', '/api/db/users')
   console.log(allUsers);
@@ -328,7 +328,7 @@ const createFreshDashboardStats = (): DashboardStats => {
 
 // Get user-specific network members
 // done
-export const getUserNetworkMembers = async (userId: string): NetworkMember => {
+export const getUserNetworkMembers = async (userId: string): Promise<NetworkMember> => {
   console.log(`Retrieving network members for user ID: ${userId}`);
 
   // Try to get user-specific network data first
