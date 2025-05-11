@@ -39,9 +39,8 @@ import { NetworkMember, NetworkStats, User } from "../types";
 import KycRequired from "../components/auth/KycRequired";
 
 // Import STORAGE_KEYS from localStorageService
-import localStorageService from "../utils/localStorageService";
-import axios from "axios";
-const { STORAGE_KEYS } = localStorageService;
+import localStorageService from '../utils/localStorageService';
+import axios from 'axios';
 
 // Define a custom interface for our local usage to avoid duplicating type errors
 interface NetworkMemberWithLevel extends NetworkMember {
@@ -256,29 +255,24 @@ const Network: React.FC = () => {
       };
 
       try {
-        const response = await axios.put(
-          `${serverUrl}/api/db/network/${currentUser.id}`,
-          treeData
-        );
-        if (response.status !== 200) {
-          console.error("Failed to update network node");
+        const response = await fetch(`${serverUrl}/api/db/network/${currentUser.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(treeData),
+        });
+        if (!response.ok) {
+          console.error('Failed to update network node');
         }
       } catch (error) {
         console.error("Error updating network node:", error);
       }
 
       try {
-        const response = await axios.put(
-          `${serverUrl}/api/db/stats/network/${currentUser.id}`,
-          networkStats,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-        if (response.status !== 200) {
-          console.error("Failed to update network stats");
+        const response = await fetch(`${serverUrl}/api/db/stats/network/${currentUser.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(networkStats),
+        });
+        if (!response.ok) {
+          console.error('Failed to update network stats');
         }
       } catch (error) {
         console.error("Error updating network stats:", error);
