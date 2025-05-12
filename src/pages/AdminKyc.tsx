@@ -14,7 +14,7 @@ const AdminKyc: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [rejectionNote, setRejectionNote] = useState<string>('');
   const [showNoteInput, setShowNoteInput] = useState<boolean>(false);
-
+const serverUrl = import.meta.env.VITE_SERVER_URL
   // Load KYC requests and users
   const loadKycData = async () => {
     const requests = await getAllKycRequests();
@@ -56,6 +56,34 @@ const AdminKyc: React.FC = () => {
       setShowNoteInput(true);
     }
   };
+
+  const handleDelete = async (request: KycRequest) => {
+  if (window.confirm(`Are you sure you want to delete the KYC request from ${request.userName}?`)) {
+    console.log(request.id)
+    try {
+      const response = await fetch(`${serverUrl}/api/db/kycRequests/${request.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete KYC request');
+      }
+
+      // Reload updated data
+      await loadKycData();
+
+      // Clear selection if the deleted one was selected
+      if (selectedRequest && selectedRequest.id === request.id) {
+        setSelectedRequest(null);
+      }
+
+      alert('KYC request deleted successfully');
+    } catch (error) {
+      console.error('Error deleting KYC request:', error);
+      alert('Failed to delete KYC request');
+    }
+  }
+};
 
   const cancelRejection = () => {
     setShowNoteInput(false);
@@ -147,6 +175,14 @@ const AdminKyc: React.FC = () => {
                             leftIcon={<Eye className="h-4 w-4" />}
                           >
                             View
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(request)}
+                            leftIcon={<XCircle className="h-4 w-4" />}
+                          >
+                            Delete
                           </Button>
                         </td>
                       </tr>
@@ -409,4 +445,4 @@ const AdminKyc: React.FC = () => {
   );
 };
 
-export default AdminKyc; 
+export default AdminKyc;

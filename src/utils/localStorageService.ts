@@ -564,6 +564,7 @@ export interface KycRequest {
   reviewNotes?: string;
 }
 
+//done
 export const getAllKycRequests = async (): Promise<KycRequest[]> => {
   try {
     const data = await apiCall('get', '/api/db/kycRequests');
@@ -574,7 +575,7 @@ export const getAllKycRequests = async (): Promise<KycRequest[]> => {
   }
 };
 
-export const addKycRequest = async (request: KycRequest): void => {
+export const addKycRequest = async (request: KycRequest): Promise<void> => {
   const requests = await getAllKycRequests();
   requests.push(request);
   setToStorage(STORAGE_KEYS.KYC_REQUESTS, requests);
@@ -767,7 +768,7 @@ export const getAllUsersForAdmin = (): User[] => {
   return getFromStorage<User[]>(STORAGE_KEYS.USERS) || [];
 };
 
-export const deleteUser = (userId: string): boolean => {
+export const deleteUser = async (userId: string): boolean => {
   try {
     // Get all users
     const users = getAllUsersForAdmin();
