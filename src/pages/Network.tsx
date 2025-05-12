@@ -510,7 +510,7 @@ const Network: React.FC = () => {
 
       // 4. Get current user's network node
       const { data: networkNode } = await axios.get(
-        `${serverUrl}/api/db/network/${currentUser.id}`
+        `${serverUrl}/api/db/network?userId=${currentUser.id}`
       );
 
       // Add other user as a direct child
