@@ -10,6 +10,7 @@ import { getAllUsersForAdmin, updateUserProfile, updateUserKycStatus, getNetwork
 import { User as UserType, KYCStatus } from '../types';
 import { NetworkMember } from '../types';
 import axios from 'axios';
+import { log } from 'console';
 interface UserData extends UserType {
   directReferrals: number;
   teamSize: number;
@@ -134,21 +135,23 @@ const AdminUsers: React.FC = () => {
     });
   };
 
-  const handleViewNetwork = (user: UserData) => {
+  const handleViewNetwork = async (user: UserData) => {
     setSelectedUser(user);
     setShowNetwork(true);
 
     // Fetch the specific user's network data
-    let userNetworkData = getUserNetworkMembers(user.id);
+    let userNetworkData
+    const userNetwork = await getUserNetworkMembers(user.id);
     let hadToCreateNetworkData = false;
 
     // If user network data is empty or doesn't have proper structure, build it
-    if (!userNetworkData || !userNetworkData.id || !userNetworkData.children) {
+    if (!userNetworkData || !userNetwork.id || !userNetwork.children) {
       console.log(`No network data found for user ${user.name}, creating it now`);
       hadToCreateNetworkData = true;
 
       // Get all users to build the network structure
-      const allUsers = getAllUsersForAdmin();
+      const allUsers = await getAllUsers();
+      console.log(`All users: ${allUsers}`);
 
       // Find direct referrals (users sponsored by this user)
       const directReferrals = allUsers.filter(u =>
@@ -649,7 +652,7 @@ const AdminUsers: React.FC = () => {
                 {/* Network Visualization Section */}
                 {networkData && networkData.id ? (
                   <div className="overflow-auto py-4 max-h-[60vh]">
-                    <NetworkTreeView data={networkData} />
+                    <NetworkTreeView key={`network-tree-${networkData.children?.length || 0}`} data={networkData} />
                   </div>
                 ) : (
                   <div className="text-center py-4">
