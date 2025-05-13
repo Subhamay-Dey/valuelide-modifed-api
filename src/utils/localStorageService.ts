@@ -332,12 +332,13 @@ export const getUserNetworkMembers = async (userId: string): Promise<NetworkMemb
   console.log(`Retrieving network members for user ID: ${userId}`);
 
   // Try to get user-specific network data first
-  const userNetwork = await apiCall('get', '/api/db/network', userId)
+  const userNetwork = await apiCall('get', `/api/db/network/${userId}`)
 
   if (userNetwork) {
     console.log(`Found network data ${userNetwork.children?.length || 0} children`);
     return userNetwork;
   }
+
 
   // Fall back to default network data (for backward compatibility)
   console.log(`No specific network data found for user ${userId}, falling back to default`);
