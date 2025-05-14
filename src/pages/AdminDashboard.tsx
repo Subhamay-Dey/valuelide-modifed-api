@@ -8,7 +8,7 @@ import { getAllKycRequests, getAdminStats, getAllTransactions, getAllUsersForAdm
 import { Transaction, User } from '../types';
 import axios from 'axios';
 
-const serverUrl = import.meta.env.SERVER_URL
+const serverUrl = import.meta.env.VITE_SERVER_URL
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -64,7 +64,7 @@ const AdminDashboard: React.FC = () => {
       setStats({
         pendingKyc: pendingKycRequests,
         totalUsers: totalUsers,
-        activeUsers: totalUsers.filter(user => user.kycStatus === 'approved').length,
+        activeUsers: 0,//totalUsers.filter(user => user.kycStatus === 'approved').length,
         totalTransactions: totalTransactions,
         totalEarnings: totalEarnings,
         totalWithdrawals: totalWithdrawals,
