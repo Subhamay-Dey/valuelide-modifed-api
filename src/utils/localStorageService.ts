@@ -1245,14 +1245,15 @@ export const addReferralBonusTransaction = (sponsorId: string, referredUserId: s
 };
 
 // Function to check for missing referral bonuses and add them if needed
-export const checkAndUpdateMissingReferralBonuses = (userId: string): void => {
-  const user = getAllUsers().find(u => u.id === userId);
+export const checkAndUpdateMissingReferralBonuses = async (userId: string): Promise<void>  => {
+    const allUsers = await getAllUsers();
+  const user = allUsers.find(u => u.id === userId);
   if (!user) return;
 
   console.log(`Checking for missing referral bonuses for user ${user.name} (${userId})`);
 
   // Get all users who have this user as their sponsor
-  const allUsers = getAllUsers();
+  //const allUsers = await getAllUsers();
   const referredUsers = allUsers.filter(u => {
     // Check if this user's referral code is the sponsor ID of another user
     return u.sponsorId &&

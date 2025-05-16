@@ -31,7 +31,7 @@ const Wallet: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<'transactions' | 'withdrawals'>('transactions');
   
-  const loadData = () => {
+  const loadData = async () => {
     setIsLoading(true);
     
     // Get current user
@@ -52,7 +52,7 @@ const Wallet: React.FC = () => {
         const userWallet = getUserWalletWithUpdatedBonuses(loggedInUserId);
         const userDashboardStats = getUserDashboardStats(loggedInUserId);
         const userTransactions = getUserTransactions(loggedInUserId);
-        const userWithdrawalRequests = getUserWithdrawalRequests(loggedInUserId);
+        const userWithdrawalRequests = await getUserWithdrawalRequests(loggedInUserId);
         
         console.log('Loaded wallet data:', {
           balance: userWallet.balance,
