@@ -5,7 +5,8 @@ import Avatar from '../ui/Avatar';
 import Badge from '../ui/Badge';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
-import { X, ArrowLeft } from 'lucide-react';
+import { X, ArrowLeft, Search } from 'lucide-react';
+import Input from '../ui/Input';
 
 interface NetworkTreeViewProps {
   data: NetworkMember;
@@ -148,6 +149,8 @@ const NetworkTreeView: React.FC<NetworkTreeViewProps> = ({ data }) => {
   const [selectedMember, setSelectedMember] = useState<NetworkMember | null>(null);
   const [currentRoot, setCurrentRoot] = useState<NetworkMember>(data);
   const [previousRoots, setPreviousRoots] = useState<NetworkMember[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   useEffect(() => {
     console.log("NetworkTreeView received data:", data);
@@ -157,6 +160,48 @@ const NetworkTreeView: React.FC<NetworkTreeViewProps> = ({ data }) => {
       return;
     }
   }, [data]);
+
+  const findMemberInTree = (tree: NetworkMember, searchTerm: string): NetworkMember | null => {
+    // Case-insensitive search
+    const searchLower = searchTerm.toLowerCase();
+
+    // Check if current member matches
+    if (tree.name.toLowerCase().includes(searchLower) ||
+      tree.referralCode.toLowerCase().includes(searchLower)) {
+      return tree;
+    }
+
+    // Search in children
+    if (tree.children) {
+      for (const child of tree.children) {
+        const found = findMemberInTree(child, searchTerm);
+        if (found) {
+          return found;
+        }
+      }
+    }
+
+    return null;
+  };
+
+  const handleSearch = () => {
+    setSearchError(null);
+    if (!searchTerm.trim()) {
+      setSearchError('Please enter a search term');
+      return;
+    }
+
+    // Search by name or referral code
+    const foundMember = findMemberInTree(data, searchTerm);
+
+    if (foundMember) {
+      setPreviousRoots(prev => [...prev, currentRoot]);
+      setCurrentRoot(foundMember);
+      setSearchTerm('');
+    } else {
+      setSearchError('No member found with that referral code');
+    }
+  };
 
   const handleNodeClick = (member: NetworkMember) => {
     // Update the tree view
@@ -232,7 +277,30 @@ const NetworkTreeView: React.FC<NetworkTreeViewProps> = ({ data }) => {
   }
 
   return (
-    <div className="p-4 overflow-auto">
+    <div className="px-4 ">
+      <div className="flex gap-2 w-full mb-4">
+        <input
+          type="text"
+          placeholder="Search by name or referral code"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+          className="w-full border-2 border-gray-300 rounded-md px-4 py-2"
+        />
+        <Button
+          variant="primary"
+          onClick={handleSearch}
+        >
+          Search
+        </Button>
+      </div>
+
+      {searchError && (
+        <div className="mb-4 p-2 bg-error-50 text-error-700 rounded-md text-sm">
+          {searchError}
+        </div>
+      )}
+
       {previousRoots.length > 0 && (
         <Button
           variant="ghost"
@@ -244,6 +312,7 @@ const NetworkTreeView: React.FC<NetworkTreeViewProps> = ({ data }) => {
           Back to Previous Level
         </Button>
       )}
+
       <div className="min-w-max pb-10">
         <Tree
           lineWidth="2px"
