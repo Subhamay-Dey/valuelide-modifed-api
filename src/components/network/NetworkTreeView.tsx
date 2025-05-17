@@ -95,7 +95,7 @@ const MemberDetailsModal: React.FC<{ member: NetworkMember; onClose: () => void 
             />
             <div>
               <h3 className="text-lg font-medium text-neutral-900">{member.name}</h3>
-              <p className="text-sm text-neutral-500">ID: {member.id}</p>
+              <p className="text-sm text-neutral-500">ID: {member.distributorId}</p>
             </div>
           </div>
 

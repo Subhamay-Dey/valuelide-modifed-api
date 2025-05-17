@@ -240,7 +240,7 @@ export const getAllUsers = async (): Promise<User[]> => {
   return allUsers
 };
 
-export const addUser = async (user: User): void => {
+export const addUser = async (user: User): Promise<void> => {
   const users = await getAllUsers();
   users.push(user);
   setToStorage(STORAGE_KEYS.USERS, users);
@@ -613,7 +613,7 @@ export const getKycDocuments = async (userId: string): Promise<any[]> => {
 
 
 // Add a new user with all related fresh data
-export const addNewUserWithData = async (user: User): void => {
+export const addNewUserWithData = async (user: User): Promise<void> => {
   console.log("============== ADDING NEW USER WITH DATA ==============");
   console.log("Adding new user:", user.name, "with referral code:", user.referralCode);
   console.log("Sponsor ID:", user.sponsorId || "NONE");
@@ -653,7 +653,7 @@ export const addNewUserWithData = async (user: User): void => {
       console.log("Found sponsor:", sponsor.name, "with ID:", sponsor.id);
 
       // Get sponsor's network data
-      const sponsorNetworkData = getUserNetworkMembers(sponsor.id);
+      const sponsorNetworkData = await getUserNetworkMembers(sponsor.id);
 
       // Make sure children array exists
       if (!sponsorNetworkData.children) {
@@ -769,7 +769,7 @@ export const getAllUsersForAdmin = (): User[] => {
   return getFromStorage<User[]>(STORAGE_KEYS.USERS) || [];
 };
 
-export const deleteUser = async (userId: string): boolean => {
+export const deleteUser = async (userId: string): Promise<boolean> => {
   try {
     // Get all users
     const users = getAllUsersForAdmin();
@@ -810,7 +810,7 @@ export const deleteUser = async (userId: string): boolean => {
     const possibleSponsors = users.filter(u => u.id !== userId);
 
     for (const sponsor of possibleSponsors) {
-      const sponsorNetwork = getUserNetworkMembers(sponsor.id);
+      const sponsorNetwork = await getUserNetworkMembers(sponsor.id);
 
       if (sponsorNetwork && sponsorNetwork.children) {
         // Check if deleted user is in sponsor's direct downline
@@ -899,9 +899,9 @@ export const updateUserKycStatus = async (kycId: string, userId: string, status:
   }
 };
 
-export const getAdminStats = () => {
+export const getAdminStats = async () => {
   const users = getAllUsersForAdmin();
-  const kycRequests = getAllKycRequests();
+  const kycRequests = await getAllKycRequests();
   const transactions = getAllTransactions();
 
   return {
@@ -1080,7 +1080,7 @@ export const saveKycDocuments = (documents: any[]): void => {
 };
 
 // Function to create and add a referral bonus transaction for the sponsor
-export const addReferralBonusTransaction = (sponsorId: string, referredUserId: string, referredUserName: string): void => {
+export const addReferralBonusTransaction = async (sponsorId: string, referredUserId: string, referredUserName: string): Promise<void> => {
   // Get the commission structure to determine the bonus amount
   const commissionStructure = getCommissionStructure();
   const grossBonusAmount = commissionStructure.directReferralBonus || 3000; // Default to 3000 if not set
@@ -1146,7 +1146,7 @@ export const addReferralBonusTransaction = (sponsorId: string, referredUserId: s
   addTransaction(repurchaseTransaction);
 
   // Get the admin user (for admin fee allocation)
-  const allUsers = getAllUsers();
+  const allUsers = await getAllUsers();
   const adminUser = allUsers.find(user => user.email === 'admin@example.com'); // Assuming admin has this email
 
   if (adminUser) {
@@ -1299,7 +1299,7 @@ export const getUserWalletWithUpdatedBonuses = (userId: string): Wallet => {
 };
 
 // Function to create and add a team matching bonus transaction
-export const addTeamMatchingBonus = (userId: string, pairs: number): void => {
+export const addTeamMatchingBonus = async(userId: string, pairs: number): Promise<void> => {
   // Get the commission structure to determine the bonus amount
   const commissionStructure = getCommissionStructure();
   const bonusPerPair = commissionStructure.teamMatchingBonus || 2500; // Default to 2500 if not set
@@ -1367,7 +1367,7 @@ export const addTeamMatchingBonus = (userId: string, pairs: number): void => {
   addTransaction(repurchaseTransaction);
 
   // Get the admin user (for admin fee allocation)
-  const allUsers = getAllUsers();
+  const allUsers = await getAllUsers();
   const adminUser = allUsers.find(user => user.email === 'admin@example.com'); // Assuming admin has this email
 
   if (adminUser) {
@@ -1536,7 +1536,7 @@ const checkAndAddMilestoneRewards = (userId: string, newPairs: number): void => 
 };
 
 // Function to calculate and add royalty bonus based on company turnover
-export const addRoyaltyBonus = (userId: string, turnoverAmount: number): void => {
+export const addRoyaltyBonus = async (userId: string, turnoverAmount: number): Promise<void> => {
   // Get the commission structure to determine the bonus percentage
   const commissionStructure = getCommissionStructure();
   const royaltyPercentage = commissionStructure.royaltyBonus / 100 || 0.02; // Default to 2% if not set
@@ -1605,7 +1605,7 @@ export const addRoyaltyBonus = (userId: string, turnoverAmount: number): void =>
   addTransaction(repurchaseTransaction);
 
   // Get the admin user (for admin fee allocation)
-  const allUsers = getAllUsers();
+  const allUsers = await getAllUsers();
   const adminUser = allUsers.find(user => user.email === 'admin@example.com'); // Assuming admin has this email
 
   if (adminUser) {

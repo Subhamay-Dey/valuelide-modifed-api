@@ -61,6 +61,7 @@ export interface Wallet {
 export interface NetworkMember {
   id: string;
   name: string;
+  distributorId?:string
   profilePicture?: string;
   referralCode: string;
   joinDate: string;

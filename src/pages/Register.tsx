@@ -66,7 +66,7 @@ const Register: React.FC = () => {
       if (referralCode) {
         console.log("Found referral code in URL:", referralCode);
         const users = await getAllUsers();
-        const foundReferrer = users.find(user => user.referralCode.toUpperCase() === referralCode.toUpperCase());
+        const foundReferrer = users.find(user => user.distributorId.toUpperCase() === referralCode.toUpperCase());
 
         if (foundReferrer) {
           console.log("Found referrer:", foundReferrer.name);
@@ -234,7 +234,7 @@ const Register: React.FC = () => {
         distributorId:distributorId,
         profilePicture: '', // Default empty
         sponsorId: finalReferralCode ? finalReferralCode.toUpperCase() : null,
-        referralCode: formData.name.substring(0, 4).toUpperCase() + Math.floor(Math.random() * 10000),
+        referralCode:distributorId,//name.substring(0, 4).toUpperCase() + Math.floor(Math.random() * 10000),
         registrationDate: new Date().toISOString(),
         kycStatus: 'pending' as KYCStatus,
         kycDocuments: {
