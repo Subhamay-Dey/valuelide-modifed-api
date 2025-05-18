@@ -393,7 +393,7 @@ const Referrals: React.FC = () => {
         </Card>
 
         {/* Referral Stats */}
-        <Card className="lg:col-span-1">
+        {/* <Card className="lg:col-span-1">
           <h3 className="text-lg font-semibold mb-4">Referral Statistics</h3>
           <div className="space-y-4">
             <div className="bg-primary-50 p-4 rounded-lg">
@@ -426,7 +426,7 @@ const Referrals: React.FC = () => {
               </div>
             </div>
           </div>
-        </Card>
+        </Card> */}
 
         {/* Marketing Materials */}
         <Card className="lg:col-span-3">

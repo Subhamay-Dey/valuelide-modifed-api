@@ -119,7 +119,7 @@ const WithdrawFunds: React.FC<WithdrawFundsProps> = ({ walletBalance, onSuccess 
       }
       
       // Create withdrawal request
-      const withdrawalRequest = createWithdrawalRequest(
+      const withdrawalRequest = await createWithdrawalRequest(
         user.id,
         withdrawalAmount,
         {

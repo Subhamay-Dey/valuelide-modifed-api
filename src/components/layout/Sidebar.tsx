@@ -72,11 +72,11 @@ const Sidebar: React.FC = () => {
   ];
 
   const bottomNavItems: NavItem[] = [
-    {
-      name: 'Settings',
-      path: '/settings',
-      icon: <Settings className="h-5 w-5" />,
-    },
+    // {
+    //   name: 'Settings',
+    //   path: '/settings',
+    //   icon: <Settings className="h-5 w-5" />,
+    // },
     {
       name: 'Help & Support',
       path: '/support',

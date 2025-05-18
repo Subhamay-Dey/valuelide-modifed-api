@@ -257,7 +257,7 @@ export const processPayment = async (product: Product): Promise<boolean> => {
         color: '#6366F1',
       },
       // Safe handling of payment success
-      handler: function(response: any) {
+      handler: async function(response: any) {
         // Restore console first
         restoreConsole();
         
@@ -273,7 +273,7 @@ export const processPayment = async (product: Product): Promise<boolean> => {
           );
           
           // Record the purchase and distribute commissions
-          const success = recordProductPurchase(
+          const success = await recordProductPurchase(
             product.id,
             response.razorpay_payment_id,
             response.razorpay_payment_id 
@@ -339,7 +339,7 @@ export const processPayment = async (product: Product): Promise<boolean> => {
 };
 
 // Simplified payment verification
-export const handlePaymentVerification = (
+export const handlePaymentVerification =  (
   paymentId: string,
   systemOrderId: string
 ): Promise<boolean> => {

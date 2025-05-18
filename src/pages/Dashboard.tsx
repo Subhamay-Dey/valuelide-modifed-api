@@ -14,19 +14,39 @@ const Dashboard: React.FC = () => {
   const [userName, setUserName] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    // Get the current logged in user ID
-    const loggedInUserId = getFromStorage<string>('logged_in_user');
-    const currentUser = getCurrentUser();
+  // useEffect(() => {
+  //   // Get the current logged in user ID
+  //   const loggedInUserId = getFromStorage<string>('logged_in_user');
+  //   const currentUser = getCurrentUser();
 
-    if (loggedInUserId && currentUser) {
-      // Get user-specific dashboard stats
-      const userDashboardStats = getUserDashboardStats(loggedInUserId);
-      setStats(userDashboardStats);
-      setUserName(currentUser.name);
-    }
+  //   if (loggedInUserId && currentUser) {
+  //     // Get user-specific dashboard stats
+  //     const userDashboardStats = await getUserDashboardStats(loggedInUserId);
+  //     setStats(userDashboardStats);
+  //     setUserName(currentUser.name);
+  //   }
 
-    setIsLoading(false);
+  //   setIsLoading(false);
+  // }, []);
+    useEffect(() => {
+    const fetchDashboardStats = async () => {
+      const loggedInUserId = getFromStorage<string>('logged_in_user');
+      const currentUser = getCurrentUser();
+
+      if (loggedInUserId && currentUser) {
+        try {
+          const userDashboardStats = await getUserDashboardStats(loggedInUserId);
+          setStats(userDashboardStats);
+          setUserName(currentUser.name);
+        } catch (err) {
+          console.error('Failed to load dashboard stats:', err);
+        }
+      }
+
+      setIsLoading(false);
+    };
+
+    fetchDashboardStats();
   }, []);
 
   if (isLoading || !stats) {
@@ -134,7 +154,7 @@ const Dashboard: React.FC = () => {
           <Card title="Value Life Income Types">
             <div className="flex flex-col gap-4">
               {/* Retail Profit */}
-              <div className="flex items-center bg-white rounded-xl shadow hover:shadow-lg transition p-4 border border-neutral-100">
+              {/* <div className="flex items-center bg-white rounded-xl shadow hover:shadow-lg transition p-4 border border-neutral-100">
                 <div className="bg-pink-500 p-3 rounded-full flex items-center justify-center mr-4">
                   <DollarSign className="h-7 w-7 text-white" />
                 </div>
@@ -145,7 +165,7 @@ const Dashboard: React.FC = () => {
                 <div className="text-right font-extrabold text-lg text-primary-700 min-w-[80px]">
                     {formatCurrency(stats.earningsByType.retail_profit || 0)}
                 </div>
-              </div>
+              </div> */}
               {/* Referral Bonus */}
               <div className="flex items-center bg-white rounded-xl shadow hover:shadow-lg transition p-4 border border-neutral-100">
                 <div className="bg-yellow-500 p-3 rounded-full flex items-center justify-center mr-4">
@@ -155,9 +175,9 @@ const Dashboard: React.FC = () => {
                   <div className="font-bold text-neutral-800">Referral Bonus</div>
                   <div className="text-xs text-neutral-500">₹3,000 per direct referral</div>
                 </div>
-                <div className="text-right font-extrabold text-lg text-primary-700 min-w-[80px]">
+                {/* <div className="text-right font-extrabold text-lg text-primary-700 min-w-[80px]">
                     {formatCurrency(stats.earningsByType.referral_bonus || 0)}
-                </div>
+                </div> */}
               </div>
               {/* Team Matching */}
               <div className="flex items-center bg-white rounded-xl shadow hover:shadow-lg transition p-4 border border-neutral-100">
@@ -168,9 +188,9 @@ const Dashboard: React.FC = () => {
                   <div className="font-bold text-neutral-800">Team Matching</div>
                   <div className="text-xs text-neutral-500">₹2,500 per pair (1:1)</div>
                 </div>
-                <div className="text-right font-extrabold text-lg text-primary-700 min-w-[80px]">
+                {/* <div className="text-right font-extrabold text-lg text-primary-700 min-w-[80px]">
                     {formatCurrency(stats.earningsByType.team_matching || 0)}
-                </div>
+                </div> */}
               </div>
               {/* Royalty Bonus */}
               <div className="flex items-center bg-white rounded-xl shadow hover:shadow-lg transition p-4 border border-neutral-100">
@@ -181,9 +201,9 @@ const Dashboard: React.FC = () => {
                   <div className="font-bold text-neutral-800">Royalty Bonus</div>
                   <div className="text-xs text-neutral-500">2% of company turnover</div>
                 </div>
-                <div className="text-right font-extrabold text-lg text-primary-700 min-w-[80px]">
+                {/* <div className="text-right font-extrabold text-lg text-primary-700 min-w-[80px]">
                     {formatCurrency(stats.earningsByType.royalty_bonus || 0)}
-                </div>
+                </div> */}
               </div>
               {/* Repurchase Bonus */}
               <div className="flex items-center bg-white rounded-xl shadow hover:shadow-lg transition p-4 border border-neutral-100">
@@ -194,9 +214,9 @@ const Dashboard: React.FC = () => {
                   <div className="font-bold text-neutral-800">Repurchase Bonus</div>
                   <div className="text-xs text-neutral-500">3% repurchase bonus</div>
                 </div>
-                <div className="text-right font-extrabold text-lg text-primary-700 min-w-[80px]">
+                {/* <div className="text-right font-extrabold text-lg text-primary-700 min-w-[80px]">
                     {formatCurrency(stats.earningsByType.repurchase_bonus || 0)}
-                </div>
+                </div> */}
               </div>
               {/* Awards & Rewards */}
               <div className="flex items-center bg-white rounded-xl shadow hover:shadow-lg transition p-4 border border-neutral-100">
@@ -207,9 +227,9 @@ const Dashboard: React.FC = () => {
                   <div className="font-bold text-neutral-800">Awards & Rewards</div>
                   <div className="text-xs text-neutral-500">Based on achievements</div>
                 </div>
-                <div className="text-right font-extrabold text-lg text-primary-700 min-w-[80px]">
+                {/* <div className="text-right font-extrabold text-lg text-primary-700 min-w-[80px]">
                     {formatCurrency(stats.earningsByType.award_reward || 0)}
-                </div>
+                </div> */}
               </div>
               {/* Withdrawals */}
               <div className="flex items-center bg-white rounded-xl shadow hover:shadow-lg transition p-4 border border-neutral-100">
@@ -220,9 +240,9 @@ const Dashboard: React.FC = () => {
                   <div className="font-bold text-neutral-800">Withdrawals</div>
                   <div className="text-xs text-neutral-500">Completed withdrawals</div>
                 </div>
-                <div className="text-right font-extrabold text-lg text-primary-700 min-w-[80px]">
+                {/* <div className="text-right font-extrabold text-lg text-primary-700 min-w-[80px]">
                     {formatCurrency(Math.abs(stats.earningsByType.withdrawal || 0))}
-                </div>
+                </div> */}
               </div>
             </div>
           </Card>

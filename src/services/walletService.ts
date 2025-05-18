@@ -35,30 +35,85 @@ export interface WithdrawalRequest {
 }
 
 // Create a new withdrawal request
-export const createWithdrawalRequest = (
+// export const createWithdrawalRequest = (
+//   userId: string,
+//   amount: number,
+//   accountDetails: WithdrawalRequest['accountDetails']
+// ): WithdrawalRequest | null => {
+//   try {
+//     // Validate amount
+//     if (amount <= 0) {
+//       console.error('Invalid withdrawal amount');
+//       return null;
+//     }
+
+//     // Get user details
+//     const users = getAllUsers();
+//     const user = users.find(u => u.id === userId);
+//     if (!user) {
+//       console.error('User not found');
+//       return null;
+//     }
+
+//     // No balance check - allow all withdrawal requests to go to admin panel
+//     console.log(`Creating withdrawal request for user ${userId}, amount: ${amount}`);
+
+//     // Create withdrawal request
+//     const newRequest: WithdrawalRequest = {
+//       id: uuidv4(),
+//       userId,
+//       userName: user.name,
+//       amount,
+//       status: 'pending',
+//       accountDetails,
+//       requestDate: new Date().toISOString()
+//     };
+
+//     console.log("Creating withdrawal request:", newRequest);
+
+//     // Get existing withdrawal requests
+//     const withdrawalRequests = getWithdrawalRequests();
+
+//     // Log for debugging
+//     console.log("Existing withdrawal requests:", withdrawalRequests);
+
+//     // Add new request
+//     withdrawalRequests.push(newRequest);
+
+//     // Save to localStorage
+//     setToStorage('withdrawal_requests', withdrawalRequests);
+
+//     // Log the updated array for debugging
+//     console.log("Updated withdrawal requests:", getWithdrawalRequests());
+
+//     // We don't update user's wallet balance until admin approves
+//     // This leaves the withdrawal amount available in the wallet until admin processes it
+
+//     return newRequest;
+//   } catch (error) {
+//     console.error('Error creating withdrawal request:', error);
+//     return null;
+//   }
+// };
+export const createWithdrawalRequest = async (
   userId: string,
   amount: number,
   accountDetails: WithdrawalRequest['accountDetails']
-): WithdrawalRequest | null => {
+): Promise<WithdrawalRequest | null> => {
   try {
-    // Validate amount
     if (amount <= 0) {
       console.error('Invalid withdrawal amount');
       return null;
     }
 
-    // Get user details
-    const users = getAllUsers();
+    // Fix here: await the promise
+    const users = await getAllUsers();
     const user = users.find(u => u.id === userId);
     if (!user) {
       console.error('User not found');
       return null;
     }
 
-    // No balance check - allow all withdrawal requests to go to admin panel
-    console.log(`Creating withdrawal request for user ${userId}, amount: ${amount}`);
-
-    // Create withdrawal request
     const newRequest: WithdrawalRequest = {
       id: uuidv4(),
       userId,
@@ -66,28 +121,12 @@ export const createWithdrawalRequest = (
       amount,
       status: 'pending',
       accountDetails,
-      requestDate: new Date().toISOString()
+      requestDate: new Date().toISOString(),
     };
 
-    console.log("Creating withdrawal request:", newRequest);
-
-    // Get existing withdrawal requests
-    const withdrawalRequests = getWithdrawalRequests();
-
-    // Log for debugging
-    console.log("Existing withdrawal requests:", withdrawalRequests);
-
-    // Add new request
+    const withdrawalRequests = getFromStorage<WithdrawalRequest[]>('withdrawal_requests') || [];
     withdrawalRequests.push(newRequest);
-
-    // Save to localStorage
     setToStorage('withdrawal_requests', withdrawalRequests);
-
-    // Log the updated array for debugging
-    console.log("Updated withdrawal requests:", getWithdrawalRequests());
-
-    // We don't update user's wallet balance until admin approves
-    // This leaves the withdrawal amount available in the wallet until admin processes it
 
     return newRequest;
   } catch (error) {
@@ -96,10 +135,13 @@ export const createWithdrawalRequest = (
   }
 };
 
+
 // Get all withdrawal requests
 export const getWithdrawalRequests = async (userId?: string): Promise<WithdrawalRequest[]> => {
   try {
-    const url = `${serverUrl}/api/db/withdrawalRequests?userId=${userId}}`
+   const url = userId
+      ? `${serverUrl}/api/db/withdrawalRequests?userId=${userId}`
+      : `${serverUrl}/api/db/withdrawalRequests`;
 
     const response = await axios.get(url);
     const withdrawalRequests = response.data;
