@@ -613,7 +613,7 @@ export const getKycDocuments = async (userId: string): Promise<any[]> => {
 
 
 // Add a new user with all related fresh data
-export const addNewUserWithData = async (user: User): Promise<void> => {
+export const addNewUserWithData = async (user: User, sponsorId?: string, position?: 'left' | 'right'): Promise<void> => {
   console.log("============== ADDING NEW USER WITH DATA ==============");
   console.log("Adding new user:", user.name, "with referral code:", user.referralCode);
   console.log("Sponsor ID:", user.sponsorId || "NONE");
@@ -639,98 +639,50 @@ export const addNewUserWithData = async (user: User): Promise<void> => {
   // Create and add fresh network member data
   const networkMember = createFreshNetworkMember(user);
 
-  // If this user has a sponsor, update the sponsor's network structure
-  if (user.sponsorId) {
-    console.log("User has a sponsor with ID or referral code:", user.sponsorId);
-
-    // Find the sponsor by their referral code or user ID
-    const sponsor = users.find(u =>
-      u.id === user.sponsorId ||
-      (u.referralCode && u.referralCode.toUpperCase() === user.sponsorId?.toUpperCase())
-    );
-
+  // If this user has a sponsor and position, update the sponsor's network
+  if (sponsorId && position) {
+    // Find the sponsor by their distributorId or referralCode
+    const sponsor = users.find(u => u.distributorId === sponsorId || u.referralCode === sponsorId);
     if (sponsor) {
-      console.log("Found sponsor:", sponsor.name, "with ID:", sponsor.id);
-
-      // Get sponsor's network data
+      // Fetch sponsor's network data
       const sponsorNetworkData = await getUserNetworkMembers(sponsor.id);
-
-      // Make sure children array exists
-      if (!sponsorNetworkData.children) {
-        console.log("Sponsor had no children array, creating one");
-        sponsorNetworkData.children = [];
+      if (!sponsorNetworkData.children) sponsorNetworkData.children = [];
+      // Place user in left or right position
+      if (position === 'left') {
+        if (!sponsorNetworkData.children[0]) {
+          sponsorNetworkData.children[0] = {
+            id: user.id,
+            name: user.name,
+            profilePicture: user.profilePicture || '',
+            referralCode: user.referralCode,
+            joinDate: user.registrationDate,
+            active: true,
+            children: []
+          };
+        } else {
+          sponsorNetworkData.children.splice(0, 0, {
+            id: user.id,
+            name: user.name,
+            profilePicture: user.profilePicture || '',
+            referralCode: user.referralCode,
+            joinDate: user.registrationDate,
+            active: true,
+            children: []
+          });
+        }
+      } else if (position === 'right') {
+        sponsorNetworkData.children[1] = {
+          id: user.id,
+          name: user.name,
+          profilePicture: user.profilePicture || '',
+          referralCode: user.referralCode,
+          joinDate: user.registrationDate,
+          active: true,
+          children: []
+        };
       }
-
-      // Add this user as a direct child of the sponsor
-      const childMember = {
-        id: user.id,
-        name: user.name,
-        profilePicture: user.profilePicture || '',
-        referralCode: user.referralCode,
-        joinDate: user.registrationDate,
-        active: true,
-        children: []
-      };
-
-      // Check if this child already exists in the sponsor's network to avoid duplicates
-      const existingChildIndex = sponsorNetworkData.children.findIndex(child =>
-        child.id === user.id || child.referralCode === user.referralCode
-      );
-
-      if (existingChildIndex >= 0) {
-        console.log(`User ${user.name} already exists in sponsor's network, updating`);
-        sponsorNetworkData.children[existingChildIndex] = childMember;
-      } else {
-        sponsorNetworkData.children.push(childMember);
-
-        // Add referral bonus transaction for sponsor (only for new referrals)
-        addReferralBonusTransaction(sponsor.id, user.id, user.name);
-      }
-
-      console.log(`Added/Updated ${user.name} as child to ${sponsor.name}'s network. Children count: ${sponsorNetworkData.children.length}`);
-
-      // Update the sponsor's network data in their specific storage - IMPORTANT: Use the correct key format
-      const sponsorNetworkKey = `mlm_network_members_${sponsor.id}`;
-      setToStorage(sponsorNetworkKey, sponsorNetworkData);
-      console.log(`Updated sponsor's network data at key: ${sponsorNetworkKey}`);
-
-      // Also update the general network data for backward compatibility
-      const generalNetworkData = getNetworkMembers();
-      if (generalNetworkData.id === sponsor.id) {
-        setToStorage(STORAGE_KEYS.NETWORK_MEMBERS, sponsorNetworkData);
-      }
-
-      // Update sponsor's network stats
-      const sponsorStats = getUserNetworkStats(sponsor.id);
-
-      // Make sure the stats object has all the necessary properties
-      if (!sponsorStats.totalMembers) sponsorStats.totalMembers = 0;
-      if (!sponsorStats.directReferrals) sponsorStats.directReferrals = 0;
-      if (!sponsorStats.activeMembers) sponsorStats.activeMembers = 0;
-      if (!sponsorStats.levelWiseCount) sponsorStats.levelWiseCount = { 1: 0, 2: 0, 3: 0 };
-
-      sponsorStats.totalMembers += 1;
-      sponsorStats.directReferrals += 1;
-      sponsorStats.activeMembers += 1;
-
-      // Ensure levelWiseCount is initialized
-      if (!sponsorStats.levelWiseCount) {
-        sponsorStats.levelWiseCount = { 1: 0, 2: 0, 3: 0 };
-      }
-      sponsorStats.levelWiseCount[1] = (sponsorStats.levelWiseCount[1] || 0) + 1;
-
-      // Update sponsor's specific stats
-      const sponsorStatsKey = `${STORAGE_KEYS.NETWORK_STATS}_${sponsor.id}`;
-      setToStorage(sponsorStatsKey, sponsorStats);
-      console.log(`Updated sponsor's stats at key: ${sponsorStatsKey}`);
-
-      // Update dashboard stats for sponsor
-      const sponsorDashboardStats = getUserDashboardStats(sponsor.id);
-      sponsorDashboardStats.directReferrals += 1;
-      sponsorDashboardStats.teamSize += 1;
-      setToStorage(`${STORAGE_KEYS.DASHBOARD_STATS}_${sponsor.id}`, sponsorDashboardStats);
-    } else {
-      console.warn("Sponsor not found with referral code:", user.sponsorId);
+      // Save updated sponsor network
+      setToStorage(`mlm_network_members_${sponsor.id}`, sponsorNetworkData);
     }
   } else {
     console.log("User has no sponsor - will be at the top level of their own network");

@@ -38,7 +38,8 @@ const Register: React.FC = () => {
     address: '',
     password: '',
     confirmPassword: '',
-    manualReferralCode: ''
+    sponsorId: '',
+    manualReferralCode: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -46,6 +47,9 @@ const Register: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [useManualReferral, setUseManualReferral] = useState(false);
   const [referrer, setReferrer] = useState<UserType | null>(null);
+  const [sponsorPosition, setSponsorPosition] = useState<'left' | 'right' | null>(null);
+  const [referralPosition, setReferralPosition] = useState<'left' | 'right' | null>(null);
+  const [sponsorInfo, setSponsorInfo] = useState<{name: string}|null>(null);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -60,96 +64,54 @@ const Register: React.FC = () => {
     });
   }, []);
 
-  // If referral code is provided in URL, try to find the referrer
   useEffect(() => {
     const findReferrer = async () => {
       if (referralCode) {
-        console.log("Found referral code in URL:", referralCode);
         const users = await getAllUsers();
-        const foundReferrer = users.find(user => user.distributorId.toUpperCase() === referralCode.toUpperCase());
-
-        if (foundReferrer) {
-          console.log("Found referrer:", foundReferrer.name);
-          setReferrer(foundReferrer);
-        } else {
-          console.log("No referrer found for code:", referralCode);
-        }
+        const foundReferrer = users.find(user => user.distributorId.toUpperCase() === referralCode.toUpperCase() || user.referralCode.toUpperCase() === referralCode.toUpperCase());
+        if (foundReferrer) setReferrer(foundReferrer);
+        else setReferrer(null);
       }
     };
-
     findReferrer();
   }, [referralCode]);
 
-  // When manual referral code changes, try to find the referrer
-//   useEffect(() => {
-// const fetchUsers = async () => {
-//      if (formData.manualReferralCode && formData.manualReferralCode.length >= 3) {
-//       const users = await getAllUsers();
-//       const foundReferrer = users.find(
-//         user => user.referralCode.toUpperCase() === formData.manualReferralCode.toUpperCase()
-//       );
-
-//       if (foundReferrer) {
-//         setReferrer(foundReferrer);
-//         // Clear any previous error
-//         setErrors(prev => {
-//           const newErrors = { ...prev };
-//           delete newErrors.manualReferralCode;
-//           return newErrors;
-//         });
-//       } else {
-//         setReferrer(null);
-//         // Don't show error immediately while typing, only when submitting
-//       }
-//     } else {
-//       setReferrer(null);
-//     }
-// }
-//  fetchUsers();
-//   }, [formData.manualReferralCode]);
   useEffect(() => {
-  const fetchUsers = async () => {
-    if (formData.manualReferralCode && formData.manualReferralCode.length >= 3) {
-      try {
+    const fetchUsers = async () => {
+      if (formData.manualReferralCode && formData.manualReferralCode.length >= 3) {
         const users = await getAllUsers();
-
-        // Ensure users is an array before calling .find
-        if (Array.isArray(users)) {
-          const foundReferrer = users.find(
-            user =>
-              user.referralCode.toUpperCase() ===
-              formData.manualReferralCode.toUpperCase()
-          );
-
-          if (foundReferrer) {
-            setReferrer(foundReferrer);
-
-            // Clear any previous error
-            setErrors(prev => {
-              const newErrors = { ...prev };
-              delete newErrors.manualReferralCode;
-              return newErrors;
-            });
-          } else {
-            setReferrer(null);
-            // Optionally: set a soft warning state here if needed
-          }
+        const foundReferrer = users.find(user => user.referralCode.toUpperCase() === formData.manualReferralCode.toUpperCase());
+        if (foundReferrer) {
+          setReferrer(foundReferrer);
+          setErrors(prev => { const newErrors = { ...prev }; delete newErrors.manualReferralCode; return newErrors; });
         } else {
-          console.warn("getAllUsers() did not return an array:", users);
           setReferrer(null);
         }
-      } catch (error) {
-        console.error("Error fetching users:", error);
+      } else {
         setReferrer(null);
       }
-    } else {
-      setReferrer(null);
-    }
-  };
+    };
+    fetchUsers();
+  }, [formData.manualReferralCode]);
 
-  fetchUsers();
-}, [formData.manualReferralCode]);
-
+  useEffect(() => {
+    const fetchSponsor = async () => {
+      if (formData.sponsorId && formData.sponsorId.length >= 3) {
+        const users = await getAllUsers();
+        const foundSponsor = users.find(user => user.distributorId === formData.sponsorId || user.referralCode === formData.sponsorId);
+        if (foundSponsor) {
+          setSponsorInfo({ name: foundSponsor.name });
+          setErrors(prev => { const newErrors = { ...prev }; delete newErrors.sponsorId; return newErrors; });
+        } else {
+          setSponsorInfo(null);
+          setErrors(prev => ({ ...prev, sponsorId: 'Sponsor not found.' }));
+        }
+      } else {
+        setSponsorInfo(null);
+      }
+    };
+    fetchSponsor();
+  }, [formData.sponsorId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -167,105 +129,83 @@ const Register: React.FC = () => {
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-
     if (!formData.name) newErrors.name = 'Name is required';
     if (!formData.email) newErrors.email = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
-
     if (!formData.phone) newErrors.phone = 'Phone number is required';
     if (!formData.address) newErrors.address = 'Address is required';
-
     if (!formData.password) newErrors.password = 'Password is required';
     else if (formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
-
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    if (!formData.sponsorId && !referralCode && !formData.manualReferralCode) {
+      newErrors.sponsorId = 'Sponsor ID or Referral Code is required';
+      newErrors.manualReferralCode = 'Sponsor ID or Referral Code is required';
     }
-
-    // Check referral code if user wants to use manual referral
-    if (useManualReferral && formData.manualReferralCode) {
-      if (!referrer) {
-        newErrors.manualReferralCode = 'Invalid referral code. No matching user found.';
-      }
+    if (formData.sponsorId && !sponsorPosition) {
+      newErrors.sponsorPosition = 'Please select a position (Left or Right) for Sponsor ID';
     }
-
+    if (!formData.sponsorId && (referralCode || formData.manualReferralCode) && !referralPosition) {
+      newErrors.referralPosition = 'Please select a position (Left or Right) for Referral Code';
+    }
+    if (useManualReferral && formData.manualReferralCode && !referrer) {
+      newErrors.manualReferralCode = 'Invalid referral code. No matching user found.';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validate()) return;
-
     try {
       setIsLoading(true);
-      // In a real app, you would hash the password before storing it
       const hashedPassword = mockHashPassword(formData.password);
-
-      // Determine which referral code to use (URL parameter or manual entry)
-      let finalReferralCode = useManualReferral ? formData.manualReferralCode.toUpperCase() : referralCode;
-
-      // Check if we actually have a valid referrer
-      if (finalReferralCode && !referrer) {
-        // Try to find the referrer again to be sure
-        const users = await getAllUsers();
-        const foundReferrer = users.find(
-          user => user.referralCode.toUpperCase() === finalReferralCode.toUpperCase()
-        );
-
-        if (!foundReferrer) {
-          // If referrer not found, log the issue and don't use the code
-          console.warn("No valid referrer found for code:", finalReferralCode);
-          finalReferralCode = "";
-        }
+      const users = await getAllUsers();
+      let sponsor = null;
+      let usedReferralCode = '';
+      let position: 'left' | 'right' | null = null;
+      if (formData.sponsorId) {
+        sponsor = users.find(user => user.distributorId === formData.sponsorId || user.referralCode === formData.sponsorId);
+        position = sponsorPosition;
+      } else if (useManualReferral && formData.manualReferralCode) {
+        sponsor = users.find(user => user.referralCode.toUpperCase() === formData.manualReferralCode.toUpperCase());
+        usedReferralCode = formData.manualReferralCode.toUpperCase();
+        position = referralPosition;
+      } else if (referralCode) {
+        sponsor = users.find(user => user.referralCode.toUpperCase() === referralCode.toUpperCase() || user.distributorId.toUpperCase() === referralCode.toUpperCase());
+        usedReferralCode = referralCode.toUpperCase();
+        position = referralPosition;
       }
-
-      console.log("Using referral code for registration:", finalReferralCode || "NONE");
-      const distributorId = "VL" + Math.floor(100 + Math.random() * 900); // Random 3-digit number, e.g., VL234
-
-
-      // Create a new user object to store in localStorage
+      if (!sponsor) {
+        setErrors({ sponsorId: 'Sponsor or referrer not found.' });
+        setIsLoading(false);
+        return;
+      }
+      const distributorId = "VL" + Math.floor(100 + Math.random() * 900);
       const newUser = {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
         address: formData.address,
-        distributorId:distributorId,
-        profilePicture: '', // Default empty
-        sponsorId: finalReferralCode ? finalReferralCode.toUpperCase() : null,
-        referralCode:distributorId,//name.substring(0, 4).toUpperCase() + Math.floor(Math.random() * 10000),
+        distributorId: distributorId,
+        profilePicture: '',
+        sponsorId: sponsor.distributorId,
+        referralCode: distributorId,
         registrationDate: new Date().toISOString(),
         kycStatus: 'pending' as KYCStatus,
-        kycDocuments: {
-          idProof: '',
-          addressProof: '',
-          bankDetails: '',
-        },
-        bankDetails: {
-          accountName: '',
-          accountNumber: '',
-          bankName: '',
-          ifscCode: '',
-        },
-        password: hashedPassword, // In a real app, store the hashed password
+        kycDocuments: { idProof: '', addressProof: '', bankDetails: '' },
+        bankDetails: { accountName: '', accountNumber: '', bankName: '', ifscCode: '' },
+        password: hashedPassword,
+        position: position,
       };
-      console.log(newUser);
-
-      const response = await axios.post(`${serverUrl}/api/db/users`, { newUser });
+      const response = await axios.post(`${serverUrl}/api/db/users`, {
+        newUser,
+        sponsorId: sponsor.distributorId,
+        position,
+        referralCode: usedReferralCode || undefined
+      });
       const createdUser = response.data;
-      console.log(createdUser,'createdUser');
-
-      // Send welcome SMS
-       await sendWelcomeSms(createdUser.phone, createdUser.distributorId, formData.password);
-
-      // Set the user as logged in
-      // setToStorage('logged_in_user', newUser.id);
-
-      // Update the current user to be this new user
-      // updateCurrentUser(newUser);
-
-      // Redirect to KYC page after successful registration
+      await sendWelcomeSms(createdUser.phone, createdUser.distributorId, formData.password);
       navigate('/kyc');
     } catch (err) {
       setErrors({ form: 'Registration failed. Please try again.' });
@@ -516,74 +456,134 @@ const Register: React.FC = () => {
                     </button>
                   </div>
                 </div>
-              </div>
 
-              {/* Referral Code Section */}
-              <div className="space-y-4" data-aos="fade-up" data-aos-delay="800">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-700">Referral Code</label>
-                  <button
-                    type="button"
-                    onClick={() => setUseManualReferral(!useManualReferral)}
-                    className="text-sm text-blue-600 hover:text-blue-500"
-                  >
-                    {useManualReferral ? 'Use URL Code' : 'Enter Manual Code'}
-                  </button>
-                </div>
-
-                {useManualReferral ? (
+                {/* Sponsor ID Section */}
+                <div className="mb-6 p-4 border rounded-lg bg-gray-50">
+                  <div className="font-semibold text-gray-800 mb-2">Register with Sponsor ID</div>
                   <Input
-                    id="manualReferralCode"
-                    name="manualReferralCode"
+                    id="sponsorId"
+                    name="sponsorId"
                     type="text"
-                    value={formData.manualReferralCode}
+                    label="Sponsor ID"
+                    value={formData.sponsorId}
                     onChange={handleChange}
-                    error={errors.manualReferralCode}
-                    placeholder="Enter referral code"
+                    error={errors.sponsorId}
+                    placeholder="Enter your sponsor's ID or referral code"
                     leftIcon={<Users className="h-5 w-5" />}
                   />
-                ) : (
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <p className="text-sm text-gray-600">
-                      {referralCode ? (
-                        <>Using referral code: <span className="font-medium text-blue-600">{referralCode}</span></>
-                      ) : (
-                        'No referral code provided in URL'
+                  {sponsorInfo && (
+                    <div className="bg-green-50 rounded-lg p-4 border border-green-200 mt-2">
+                      <p className="text-sm text-green-700">
+                        Sponsor: <span className="font-medium">{sponsorInfo.name}</span>
+                      </p>
+                    </div>
+                  )}
+                  {errors.sponsorId && formData.sponsorId && !sponsorInfo && (
+                    <div className="bg-red-50 rounded-lg p-4 border border-red-200 mt-2">
+                      <p className="text-sm text-red-700">{errors.sponsorId}</p>
+                    </div>
+                  )}
+                  {formData.sponsorId && (
+                    <>
+                      <div className="mb-1 mt-4 text-sm text-gray-700 font-medium">
+                        Select position for Sponsor ID (Left or Right):
+                      </div>
+                      <div className="flex space-x-4 mt-2">
+                        <Button
+                          type="button"
+                          variant={sponsorPosition === 'left' ? 'primary' : 'secondary'}
+                          className={`flex-1 ${sponsorPosition === 'left' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800 border border-gray-300'}`}
+                          onClick={() => setSponsorPosition('left')}
+                        >
+                          Left
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={sponsorPosition === 'right' ? 'primary' : 'secondary'}
+                          className={`flex-1 ${sponsorPosition === 'right' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800 border border-gray-300'}`}
+                          onClick={() => setSponsorPosition('right')}
+                        >
+                          Right
+                        </Button>
+                      </div>
+                      {errors.sponsorPosition && (
+                        <div className="text-red-600 text-sm mt-1">{errors.sponsorPosition}</div>
                       )}
-                    </p>
+                    </>
+                  )}
+                </div>
+                {/* Referral Code Section */}
+                <div className="mb-6 p-4 border rounded-lg bg-gray-50">
+                  <div className="font-semibold text-gray-800 mb-2">Register with Referral Code</div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-gray-700">Referral Code</label>
+                    <button
+                      type="button"
+                      onClick={() => setUseManualReferral(!useManualReferral)}
+                      className="text-sm text-blue-600 hover:text-blue-500"
+                    >
+                      {useManualReferral ? 'Use URL Code' : 'Enter Manual Code'}
+                    </button>
                   </div>
-                )}
-
-                {referrer && (
-                  <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                    <p className="text-sm text-green-700">
-                      Referred by: <span className="font-medium">{referrer.name}</span>
-                    </p>
-                  </div>
-                )}
-
-                {/* Added Left and Right buttons below referral code section */}
-                <div className="flex space-x-4 mt-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300"
-                    onClick={() => console.log('Left button clicked')}
-                  >
-                    Left
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300"
-                    onClick={() => console.log('Right button clicked')}
-                  >
-                    Right
-                  </Button>
+                  {useManualReferral ? (
+                    <Input
+                      id="manualReferralCode"
+                      name="manualReferralCode"
+                      type="text"
+                      value={formData.manualReferralCode}
+                      onChange={handleChange}
+                      error={errors.manualReferralCode}
+                      placeholder="Enter referral code"
+                      leftIcon={<Users className="h-5 w-5" />}
+                    />
+                  ) : (
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <p className="text-sm text-gray-600">
+                        {referralCode ? (
+                          <>Using referral code: <span className="font-medium text-blue-600">{referralCode}</span></>
+                        ) : (
+                          'No referral code provided in URL'
+                        )}
+                      </p>
+                    </div>
+                  )}
+                  {referrer && (
+                    <div className="bg-green-50 rounded-lg p-4 border border-green-200 mt-2">
+                      <p className="text-sm text-green-700">
+                        Referred by: <span className="font-medium">{referrer.name}</span>
+                      </p>
+                    </div>
+                  )}
+                  {(referralCode || formData.manualReferralCode) && (
+                    <>
+                      <div className="mb-1 mt-4 text-sm text-gray-700 font-medium">
+                        Select your position in the network (Left or Right) for your referrer:
+                      </div>
+                      <div className="flex space-x-4 mt-2">
+                        <Button
+                          type="button"
+                          variant={referralPosition === 'left' ? 'primary' : 'secondary'}
+                          className={`flex-1 ${referralPosition === 'left' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800 border border-gray-300'}`}
+                          onClick={() => setReferralPosition('left')}
+                        >
+                          Left
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={referralPosition === 'right' ? 'primary' : 'secondary'}
+                          className={`flex-1 ${referralPosition === 'right' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800 border border-gray-300'}`}
+                          onClick={() => setReferralPosition('right')}
+                        >
+                          Right
+                        </Button>
+                      </div>
+                      {errors.referralPosition && (
+                        <div className="text-red-600 text-sm mt-1">{errors.referralPosition}</div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
-
-
 
               <div data-aos="fade-up" data-aos-delay="900">
                 <Button
