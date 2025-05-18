@@ -176,11 +176,11 @@ const Register: React.FC = () => {
         usedReferralCode = referralCode.toUpperCase();
         position = referralPosition;
       }
-      if (!sponsor) {
-        setErrors({ sponsorId: 'Sponsor or referrer not found.' });
-        setIsLoading(false);
-        return;
-      }
+      // if (!sponsor) {
+      //   setErrors({ sponsorId: 'Sponsor or referrer not found.' });
+      //   setIsLoading(false);
+      //   return;
+      // }
       const distributorId = "VL" + Math.floor(100 + Math.random() * 900);
       const newUser = {
         name: formData.name,
