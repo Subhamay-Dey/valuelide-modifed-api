@@ -137,10 +137,6 @@ const Register: React.FC = () => {
     if (!formData.password) newErrors.password = 'Password is required';
     else if (formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
     if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
-    // if (!formData.sponsorId && !referralCode && !formData.manualReferralCode) {
-    //   newErrors.sponsorId = 'Sponsor ID or Referral Code is required';
-    //   newErrors.manualReferralCode = 'Sponsor ID or Referral Code is required';
-    // }
     if (formData.sponsorId && !sponsorPosition) {
       newErrors.sponsorPosition = 'Please select a position (Left or Right) for Sponsor ID';
     }
@@ -176,11 +172,6 @@ const Register: React.FC = () => {
         usedReferralCode = referralCode.toUpperCase();
         position = referralPosition;
       }
-      // if (!sponsor) {
-      //   setErrors({ sponsorId: 'Sponsor or referrer not found.' });
-      //   setIsLoading(false);
-      //   return;
-      // }
       const distributorId = "VL" + Math.floor(100 + Math.random() * 900);
       const newUser = {
         name: formData.name,
@@ -189,7 +180,7 @@ const Register: React.FC = () => {
         address: formData.address,
         distributorId: distributorId,
         profilePicture: '',
-        sponsorId: sponsor.distributorId,
+        sponsorId: sponsor ? sponsor.distributorId : null,
         referralCode: distributorId,
         registrationDate: new Date().toISOString(),
         kycStatus: 'pending' as KYCStatus,
@@ -200,7 +191,7 @@ const Register: React.FC = () => {
       };
       const response = await axios.post(`${serverUrl}/api/db/users`, {
         newUser,
-        sponsorId: sponsor.distributorId,
+        sponsorId: sponsor ? sponsor.distributorId : null,
         position,
         referralCode: usedReferralCode || undefined
       });
