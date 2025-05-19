@@ -370,27 +370,15 @@ export const getUserWallet = (userId: string): Wallet => {
 };
 
 // Get user-specific dashboard stats
-// export const getUserDashboardStats = async (userId: string): Promise<DashboardStats> => {
-//   // Try to get user-specific dashboard stats first
-  
-//   const userStats = getFromStorage<DashboardStats>(`${STORAGE_KEYS.DASHBOARD_STATS}_${userId}`);
-//   if (userStats) {
-//     return userStats;
-//   }
-
-//   // Fall back to default stats (for backward compatibility)
-//   return getDashboardStats();
-// };
-export const getUserDashboardStats = async (userId: string): Promise<DashboardStats> => {
-  try {
-    const userStats = await apiCall('get', `/api/db/stats/dashboard/${userId}`);
+export const getUserDashboardStats = (userId: string): DashboardStats => {
+  // Try to get user-specific dashboard stats first
+  const userStats = getFromStorage<DashboardStats>(`${STORAGE_KEYS.DASHBOARD_STATS}_${userId}`);
+  if (userStats) {
     return userStats;
-  } catch (error: any) {
-    console.error(`Failed to fetch dashboard stats for user ${userId}:`, error?.response?.data || error.message);
-
-    // If user-specific data doesn't exist, fall back to global dashboard
-    return await getDashboardStats();
   }
+
+  // Fall back to default stats (for backward compatibility)
+  return getDashboardStats();
 };
 
 // Transaction related functions
@@ -437,7 +425,7 @@ const updateWalletAfterTransaction = (transaction: Transaction): void => {
   };
 
   // Update the user-specific wallet
-  setToStorage(`${STORAGE_KEYS.WALLET}_${transaction.userId}`, updatedWallet);
+  setToStorage(`${STORAGE_KEYS.WALLET}_${transaction.userId}, updatedWallet`);
 
   // Also update the general wallet for backward compatibility
   const generalWallet = getWallet();
@@ -469,56 +457,26 @@ export const updateNetworkStats = (stats: NetworkStats): void => {
 };
 
 // Dashboard related functions
-// export const getDashboardStats = (): DashboardStats => {
-//   return getFromStorage<DashboardStats>(STORAGE_KEYS.DASHBOARD_STATS) || {
-//     totalEarnings: 0,
-//     pendingWithdrawals: 0,
-//     completedWithdrawals: 0,
-//     directReferrals: 0,
-//     teamSize: 0,
-//     recentTransactions: [],
-//     earningsByType: {
-//       retail_profit: 0,
-//       referral_bonus: 0,
-//       team_matching: 0,
-//       royalty_bonus: 0,
-//       repurchase_bonus: 0,
-//       award_reward: 0,
-//       withdrawal: 0,
-//       withdrawal_reversal: 0
-//     },
-//     earningsTimeline: []
-//   };
-// };
-export const getDashboardStats = async (): Promise<DashboardStats> => {
-  try {
-    // Just use 'root' — the backend already checks for this
-    const stats = await apiCall('get', '/api/db/stats/dashboard/root');
-    return stats;
-  } catch (error: any) {
-    console.error('Failed to fetch global dashboard stats:', error?.response?.data || error.message);
-
-    // Fallback default structure
-    return {
-      totalEarnings: 0,
-      pendingWithdrawals: 0,
-      completedWithdrawals: 0,
-      directReferrals: 0,
-      teamSize: 0,
-      recentTransactions: [],
-      earningsByType: {
-        retail_profit: 0,
-        referral_bonus: 0,
-        team_matching: 0,
-        royalty_bonus: 0,
-        repurchase_bonus: 0,
-        award_reward: 0,
-        withdrawal: 0,
-        withdrawal_reversal: 0
-      },
-      earningsTimeline: []
-    };
-  }
+export const getDashboardStats = (): DashboardStats => {
+  return getFromStorage<DashboardStats>(STORAGE_KEYS.DASHBOARD_STATS) || {
+    totalEarnings: 0,
+    pendingWithdrawals: 0,
+    completedWithdrawals: 0,
+    directReferrals: 0,
+    teamSize: 0,
+    recentTransactions: [],
+    earningsByType: {
+      retail_profit: 0,
+      referral_bonus: 0,
+      team_matching: 0,
+      royalty_bonus: 0,
+      repurchase_bonus: 0,
+      award_reward: 0,
+      withdrawal: 0,
+      withdrawal_reversal: 0
+    },
+    earningsTimeline: []
+  };
 };
 
 export const updateDashboardStats = (stats: DashboardStats): void => {
@@ -654,7 +612,7 @@ export const getKycDocuments = async (userId: string): Promise<any[]> => {
 
 // Helper: Find the first available spot in the given position (left/right) branch
 function findAvailableSpotInBranch(root: NetworkMember, position: 'left' | 'right'): NetworkMember | null {
-  const queue: (NetworkMember | undefined)[] = [root];
+  let queue: (NetworkMember | undefined)[] = [root];
   while (queue.length > 0) {
     let node = queue.shift();
     if (!node) continue;
@@ -707,7 +665,6 @@ export const addNewUserWithData = async (user: User, sponsorId?: string, positio
 
   // If this user has a sponsor and position, update the sponsor's network
   if ((sponsorId || referralCodeForRegistration) && position) {
-    const allUsers = await getAllUsers();
     let sponsor: User | undefined = undefined;
     if (sponsorId) {
       sponsor = allUsers.find((u: User) => u.distributorId === sponsorId || u.referralCode === sponsorId);
@@ -716,7 +673,7 @@ export const addNewUserWithData = async (user: User, sponsorId?: string, positio
     }
     if (sponsor) {
       const sponsorNetworkKey = `mlm_network_members_${sponsor.id}`;
-      const  sponsorNetwork = getFromStorage<NetworkMember>(sponsorNetworkKey) || {
+      let sponsorNetwork = getFromStorage<NetworkMember>(sponsorNetworkKey) || {
         id: sponsor.id,
         name: sponsor.name,
         profilePicture: sponsor.profilePicture || '',
@@ -775,6 +732,27 @@ export const addNewUserWithData = async (user: User, sponsorId?: string, positio
     console.log(`- ${u.name}: Referral Code=${u.referralCode}, SponsorId=${u.sponsorId || "NONE"}`);
   });
   console.log("============== FINISHED ADDING NEW USER ==============");
+
+  // --- MLM COMMISSION LOGIC ---
+  // 1. Direct Referral Bonus
+  if (user.sponsorId) {
+    const allUsersForCommission = await getAllUsers();
+    const sponsor = allUsersForCommission.find(u => u.distributorId === user.sponsorId || u.referralCode === user.sponsorId);
+    if (sponsor) {
+      await addReferralBonusTransaction(sponsor.id, user.id, user.name);
+
+      // 2. Team Matching Bonus (if sponsor now has both left and right children)
+      // Find sponsor's left and right children
+      const leftChild = allUsersForCommission.find(u => u.sponsorId === sponsor.distributorId && u.position === 'left');
+      const rightChild = allUsersForCommission.find(u => u.sponsorId === sponsor.distributorId && u.position === 'right');
+      if (leftChild && rightChild) {
+        // Only add one pair per registration
+        await addTeamMatchingBonus(sponsor.id, 1);
+      }
+    }
+  }
+  // 3. (Optional) Royalty and Repurchase Bonus can be triggered on sales/repurchase events, not on registration
+  // --- END MLM COMMISSION LOGIC ---
 };
 
 // Admin specific functions
@@ -852,7 +830,7 @@ export const deleteUser = async (userId: string): Promise<boolean> => {
           }
 
           // Update sponsor's dashboard stats
-          const sponsorDashboard = await getUserDashboardStats(sponsor.id);
+          const sponsorDashboard = getUserDashboardStats(sponsor.id);
           if (sponsorDashboard) {
             sponsorDashboard.directReferrals = Math.max(0, sponsorDashboard.directReferrals - 1);
             sponsorDashboard.teamSize = Math.max(1, sponsorDashboard.teamSize - 1);
@@ -1179,7 +1157,7 @@ export const addReferralBonusTransaction = async (sponsorId: string, referredUse
     addTransaction(adminBonusTransaction);
 
     // Update admin's dashboard stats
-    const adminDashboardStats = await getUserDashboardStats(adminUser.id);
+    const adminDashboardStats = getUserDashboardStats(adminUser.id);
     if (adminDashboardStats) {
       // Update total earnings
       adminDashboardStats.totalEarnings += adminFee;
@@ -1202,7 +1180,7 @@ export const addReferralBonusTransaction = async (sponsorId: string, referredUse
 
   // Now update the sponsor's dashboard stats with the net amount 
   // (the main transaction takes care of this via updateWalletAfterTransaction)
-  const sponsorDashboardStats = await getUserDashboardStats(sponsorId);
+  const sponsorDashboardStats = getUserDashboardStats(sponsorId);
   if (sponsorDashboardStats) {
     // Update total earnings (the gross amount will be added in wallet updates)
     // We don't need to adjust the total here, just the display of different components
@@ -1296,7 +1274,7 @@ export const checkAndUpdateMissingReferralBonuses = async (userId: string): Prom
 
     if (!hasBonus) {
       console.log(`No referral bonus found for referred user ${referredUser.name}, adding it now`);
-      addReferralBonusTransaction(userId, referredUser.id, referredUser.name);
+      await addReferralBonusTransaction(userId, referredUser.id, referredUser.name);
     } else {
       console.log(`Referral bonus already exists for ${referredUser.name}`);
     }
@@ -1400,7 +1378,7 @@ export const addTeamMatchingBonus = async(userId: string, pairs: number): Promis
     addTransaction(adminBonusTransaction);
 
     // Update admin's dashboard stats
-    const adminDashboardStats = await getUserDashboardStats(adminUser.id);
+    const adminDashboardStats = getUserDashboardStats(adminUser.id);
     if (adminDashboardStats) {
       // Update total earnings
       adminDashboardStats.totalEarnings += adminFee;
@@ -1422,7 +1400,7 @@ export const addTeamMatchingBonus = async(userId: string, pairs: number): Promis
   }
 
   // Update the user's dashboard stats with the net amount
-  const userDashboardStats = await getUserDashboardStats(userId);
+  const userDashboardStats = getUserDashboardStats(userId);
   if (userDashboardStats) {
     // Add to earnings timeline with the net effect
     const today = new Date().toISOString().split('T')[0];
@@ -1638,7 +1616,7 @@ export const addRoyaltyBonus = async (userId: string, turnoverAmount: number): P
     addTransaction(adminBonusTransaction);
 
     // Update admin's dashboard stats
-    const adminDashboardStats = await getUserDashboardStats(adminUser.id);
+    const adminDashboardStats = getUserDashboardStats(adminUser.id);
     if (adminDashboardStats) {
       // Update total earnings
       adminDashboardStats.totalEarnings += adminFee;
@@ -1660,7 +1638,7 @@ export const addRoyaltyBonus = async (userId: string, turnoverAmount: number): P
   }
 
   // Update the user's dashboard stats with the net amount
-  const userDashboardStats = await getUserDashboardStats(userId);
+  const userDashboardStats = getUserDashboardStats(userId);
   if (userDashboardStats) {
     // Add to earnings timeline with the net effect
     const today = new Date().toISOString().split('T')[0];
@@ -1711,7 +1689,7 @@ export const addRoyaltyBonus = async (userId: string, turnoverAmount: number): P
 };
 
 // Function to calculate and add repurchase bonus
-export const addRepurchaseBonus = async (userId: string, productAmount: number, productName: string): Promise<void> => {
+export const addRepurchaseBonus = (userId: string, productAmount: number, productName: string): void => {
   // Get the commission structure to determine the bonus percentage
   const commissionStructure = getCommissionStructure();
   const repurchasePercentage = commissionStructure.repurchaseBonus / 100 || 0.03; // Default to 3% if not set
@@ -1764,7 +1742,7 @@ export const addRepurchaseBonus = async (userId: string, productAmount: number, 
   addTransaction(adminTransaction);
 
   // Get the admin user (for admin fee allocation)
-  const allUsers = await getAllUsers();
+  const allUsers = getAllUsers();
   const adminUser: User | undefined = allUsers.find((user: User) => user.email === 'admin@example.com'); // Assuming admin has this email
 
   if (adminUser) {
@@ -1783,7 +1761,7 @@ export const addRepurchaseBonus = async (userId: string, productAmount: number, 
     addTransaction(adminBonusTransaction);
 
     // Update admin's dashboard stats
-    const adminDashboardStats = await getUserDashboardStats(adminUser.id);
+    const adminDashboardStats = getUserDashboardStats(adminUser.id);
     if (adminDashboardStats) {
       // Update total earnings
       adminDashboardStats.totalEarnings += adminFee;
@@ -1796,148 +1774,6 @@ export const addRepurchaseBonus = async (userId: string, productAmount: number, 
       if (adminDashboardStats.recentTransactions.length > 10) {
         // Keep only the 10 most recent transactions
         adminDashboardStats.recentTransactions.pop();
-      }
-      adminDashboardStats.recentTransactions.unshift(adminBonusTransaction);
-
-      // Update the admin's dashboard stats
-      setToStorage(`${STORAGE_KEYS.DASHBOARD_STATS}_${adminUser.id}`, adminDashboardStats);
-    }
+      }}
   }
-
-  // Update the user's dashboard stats with the net amount
-  const userDashboardStats = await getUserDashboardStats(userId);
-  if (userDashboardStats) {
-    // Add to earnings timeline with the net effect
-    const today = new Date().toISOString().split('T')[0];
-    const timelineIndex = userDashboardStats.earningsTimeline.findIndex(
-      entry => entry.date === today
-    );
-
-    if (timelineIndex >= 0) {
-      // Update existing entry for today
-      userDashboardStats.earningsTimeline[timelineIndex].amount += netBonusAmount;
-    } else {
-      // Add new entry for today
-      // Find the last entry to determine the new total
-      const lastEntryAmount = userDashboardStats.earningsTimeline.length > 0
-        ? userDashboardStats.earningsTimeline[userDashboardStats.earningsTimeline.length - 1].amount
-        : 0;
-
-      userDashboardStats.earningsTimeline.push({
-        date: today,
-        amount: lastEntryAmount + netBonusAmount
-      });
-    }
-
-    // Add to recent transactions
-    if (userDashboardStats.recentTransactions.length > 10) {
-      // Keep only the 10 most recent transactions
-      userDashboardStats.recentTransactions.pop();
-    }
-
-    // Add all related transactions to the recent list
-    userDashboardStats.recentTransactions.unshift(transaction);
-    userDashboardStats.recentTransactions.unshift(tdsTransaction);
-    userDashboardStats.recentTransactions.unshift(adminTransaction);
-
-    // Limit to 10 recent transactions
-    if (userDashboardStats.recentTransactions.length > 10) {
-      userDashboardStats.recentTransactions = userDashboardStats.recentTransactions.slice(0, 10);
-    }
-
-    // Update the user's dashboard stats
-    setToStorage(`${STORAGE_KEYS.DASHBOARD_STATS}_${userId}`, userDashboardStats);
-  }
-
-  console.log(`Added repurchase bonus for ${userId} based on ${productAmount} product cost:`);
-  console.log(`Gross amount: ${grossBonusAmount}, Net after deductions: ${netBonusAmount}`);
-  console.log(`Deductions: TDS: ${tdsFee}, Admin: ${adminFee}`);
-};
-
-// Clear all data from local storage
-export const clearLocalDatabase = async (): Promise<void> => {
-  try {
-    // Clear all MLM-related data using storage keys
-    Object.values(STORAGE_KEYS).forEach((key: string) => {
-      safeRemoveItem(key);
-    });
-
-    // Clear any user-specific data
-    const users = await getAllUsers();
-    users.forEach((user: User) => {
-      const userSpecificKeys = [
-        `${STORAGE_KEYS.NETWORK_MEMBERS}_${user.id}`,
-        `${STORAGE_KEYS.NETWORK_STATS}_${user.id}`,
-        `${STORAGE_KEYS.WALLET}_${user.id}`,
-        `${STORAGE_KEYS.DASHBOARD_STATS}_${user.id}`
-      ];
-
-      userSpecificKeys.forEach((key: string) => {
-        safeRemoveItem(key);
-      });
-    });
-
-    // Clear orders
-    safeRemoveItem('value_life_orders');
-
-    console.log('Local database cleared successfully');
-  } catch (error) {
-    console.error('Error clearing local database:', error);
-  }
-};
-
-// Add a default export with all the exported functions
-export default {
-  STORAGE_KEYS,
-  initializeLocalStorage,
-  isLocalStorageAvailable,
-  getFromStorage,
-  setToStorage,
-  getCurrentUser,
-  updateCurrentUser,
-  getAllUsers,
-  addUser,
-  getUserNetworkMembers,
-  getUserNetworkStats,
-  getUserWallet,
-  getUserDashboardStats,
-  getAllTransactions,
-  getUserTransactions,
-  addTransaction,
-  getNetworkMembers,
-  updateNetworkMembers,
-  getNetworkStats,
-  updateNetworkStats,
-  getDashboardStats,
-  updateDashboardStats,
-  getWallet,
-  updateWallet,
-  getCommissionStructure,
-  updateCommissionStructure,
-  getAllKycRequests,
-  addKycRequest,
-  updateKycRequest,
-  addNewUserWithData,
-  getAllUsersForAdmin,
-  deleteUser,
-  updateUserKycStatus,
-  getAdminStats,
-  updateUserProfile,
-  processWithdrawalRequest,
-  validateAdminCredentials,
-  updateAdminCredentials,
-  getUserData,
-  getKycDocuments,
-  saveLastKycStatus,
-  getKycSubmissionHistory,
-  addKycSubmission,
-  saveKycDocuments,
-  addReferralBonusTransaction,
-  checkAndUpdateMissingReferralBonuses,
-  getUserWalletWithUpdatedBonuses,
-  addTeamMatchingBonus,
-  checkAndAddMilestoneRewards,
-  addRoyaltyBonus,
-  addRepurchaseBonus,
-  clearLocalDatabase
-}; 
+}
