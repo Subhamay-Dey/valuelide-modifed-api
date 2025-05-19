@@ -28,11 +28,11 @@ interface PurchaseTransaction extends Transaction {
 }
 
 // Records a product purchase and distributes commissions
-export const recordProductPurchase = (
+export const recordProductPurchase = async (
   productId: string, 
   paymentId: string,
   orderId?: string // Made optional since we're using paymentId
-): boolean => {
+): Promise<boolean> => {
   try {
     // Get current user and commission structure
     const currentUser = getCurrentUser();
@@ -42,7 +42,7 @@ export const recordProductPurchase = (
     }
     
     // Find sponsor (if any)
-    const allUsers = getAllUsers();
+    const allUsers = await getAllUsers();
     let sponsor: User | undefined;
     
     if (currentUser.sponsorId) {
@@ -104,11 +104,11 @@ const recordPurchase = (
 };
 
 // Distribute commissions to sponsors and upline
-const distributeCommissions = (
+const distributeCommissions = async (
   sponsor: User,
   product: Product,
   commissionStructure: CommissionStructure
-): void => {
+): Promise<void> => {
   try {
     // Calculate direct retail profit commission
     const commissionRate = product.commissionRate / 100;
@@ -198,7 +198,7 @@ const distributeCommissions = (
     // This is a simplified approach - in a real system, you would have more complex logic
     if (sponsor && sponsor.id) {
       // Get all users for matching
-      const allUsers = getAllUsers();
+      const allUsers = await getAllUsers();
       
       // Get sponsor's downline
       const leftLeg = allUsers.filter(u => 
@@ -254,14 +254,14 @@ const distributeCommissions = (
 };
 
 // Process level commissions for upline members
-const processLevelCommissions = (
+const processLevelCommissions = async(
   sponsor: User,
   product: Product,
   commissionStructure: CommissionStructure
-): void => {
+): Promise<void> => {
   try {
     // Get all users to traverse upline
-    const allUsers = getAllUsers();
+    const allUsers = await getAllUsers();
     
     let currentUserId = sponsor.id;
     let currentLevel = 1;

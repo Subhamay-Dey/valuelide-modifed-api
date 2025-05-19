@@ -425,7 +425,7 @@ const updateWalletAfterTransaction = (transaction: Transaction): void => {
   };
 
   // Update the user-specific wallet
-  setToStorage(`${STORAGE_KEYS.WALLET}_${transaction.userId}`, updatedWallet);
+  setToStorage(`${STORAGE_KEYS.WALLET}_${transaction.userId}, updatedWallet`);
 
   // Also update the general wallet for backward compatibility
   const generalWallet = getWallet();
@@ -1774,12 +1774,7 @@ export const addRepurchaseBonus = (userId: string, productAmount: number, produc
       if (adminDashboardStats.recentTransactions.length > 10) {
         // Keep only the 10 most recent transactions
         adminDashboardStats.recentTransactions.pop();
-      }
-      adminDashboardStats.recentTransactions.unshift(adminBonusTransaction);
-
-      // Update the admin's dashboard stats
-      setToStorage(`${STORAGE_KEYS.DASHBOARD_STATS}_${adminUser.id}`, adminDashboardStats);
-    }
+      }}
   }
 
   // Update the user's dashboard stats with the net amount

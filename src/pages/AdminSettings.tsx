@@ -368,7 +368,7 @@ const AdminSettings: React.FC = () => {
         </Card>
         
         {/* Security Settings */}
-        <Card className="bg-gradient-to-br from-pink-100 via-yellow-100 via-green-100 via-blue-100 to-purple-100 backdrop-blur-xl rounded-2xl shadow-2xl rainbow-border-glow animate-card-pop">
+        {/* <Card className="bg-gradient-to-br from-pink-100 via-yellow-100 via-green-100 via-blue-100 to-purple-100 backdrop-blur-xl rounded-2xl shadow-2xl rainbow-border-glow animate-card-pop">
           <div className="flex items-center mb-6">
             <Shield className="h-5 w-5 text-primary-600 mr-3" />
             <h2 className="text-lg font-semibold">Security Settings</h2>
@@ -444,10 +444,10 @@ const AdminSettings: React.FC = () => {
               </div>
             </div>
           </div>
-        </Card>
+        </Card> */}
         
         {/* Notification Settings */}
-        <Card className="bg-gradient-to-br from-yellow-100 via-pink-100 via-green-100 to-blue-100 backdrop-blur-xl rounded-2xl shadow-2xl rainbow-border-glow animate-card-pop">
+        {/* <Card className="bg-gradient-to-br from-yellow-100 via-pink-100 via-green-100 to-blue-100 backdrop-blur-xl rounded-2xl shadow-2xl rainbow-border-glow animate-card-pop">
           <div className="flex items-center mb-6">
             <Bell className="h-5 w-5 text-primary-600 mr-3" />
             <h2 className="text-lg font-semibold">Notification Settings</h2>
@@ -523,7 +523,7 @@ const AdminSettings: React.FC = () => {
               </div>
             </div>
           </div>
-        </Card>
+        </Card> */}
       </div>
 
       {/* Custom Animations and Effects */}

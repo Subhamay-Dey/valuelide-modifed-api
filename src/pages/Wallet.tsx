@@ -50,7 +50,7 @@ const Wallet: React.FC = () => {
         
         // Get user-specific wallet data with updated referral bonuses
         const userWallet = getUserWalletWithUpdatedBonuses(loggedInUserId);
-        const userDashboardStats = getUserDashboardStats(loggedInUserId);
+        const userDashboardStats = await getUserDashboardStats(loggedInUserId);
         const userTransactions = getUserTransactions(loggedInUserId);
         const userWithdrawalRequests = await getUserWithdrawalRequests(loggedInUserId);
         

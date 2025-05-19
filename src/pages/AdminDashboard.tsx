@@ -48,7 +48,7 @@ const AdminDashboard: React.FC = () => {
     setIsRefreshing(true);
 
     // Get admin stats
-    const kycRequests = getAllKycRequests();
+    //const kycRequests = getAllKycRequests();
     // const transactions = getAllTransactions();
 
     try {
@@ -85,17 +85,30 @@ const AdminDashboard: React.FC = () => {
       }> = [];
 
       // Add KYC requests to activities
-      pendingKycRequests.forEach((request: KycRequest) => {
-        const user = totalUsers.find(u => u.id === request.userId);
-        if (user) {
-          allActivities.push({
-            type: 'kyc',
-            details: `User: ${user.name} (ID: ${user.id})`,
-            timestamp: request.submissionDate,
-            timeAgo: getTimeAgo(new Date(request.submissionDate))
-          });
-        }
+      // pendingKycRequests.forEach((request: KycRequest) => {
+      //   const user = totalUsers.find(u => u.id === request.userId);
+      //   if (user) {
+      //     allActivities.push({
+      //       type: 'kyc',
+      //       details: `User: ${user.name} (ID: ${user.id})`,
+      //       timestamp: request.submissionDate,
+      //       timeAgo: getTimeAgo(new Date(request.submissionDate))
+      //     });
+      //   }
+      // });
+      if (Array.isArray(pendingKycRequests)) {
+  pendingKycRequests.forEach((request: KycRequest) => {
+    const user = totalUsers.find(u => u.id === request.userId);
+    if (user) {
+      allActivities.push({
+        type: 'kyc',
+        details: `User: ${user.name} (ID: ${user.id})`,
+        timestamp: request.submissionDate,
+        timeAgo: getTimeAgo(new Date(request.submissionDate))
       });
+    }
+  });
+}
 
       // Add transactions to activities
       totalTransactions.forEach((transaction: Transaction) => {

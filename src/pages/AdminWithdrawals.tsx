@@ -32,7 +32,13 @@ const AdminWithdrawals: React.FC = () => {
     }
 
     const user = getCurrentUser();
+    console.log("Current user in AdminWithdrawals:", user);
 
+    
+if (!user?.id) {
+  console.error("❌ Missing user ID — cannot fetch withdrawal requests.");
+  return;
+}
     // Load withdrawal requests
     const requests = await getWithdrawalRequests(user?.id);
     setWithdrawalRequests(requests);
@@ -212,7 +218,7 @@ const AdminWithdrawals: React.FC = () => {
       {/* Balance and Controls */}
       <Card className="mb-6 bg-gradient-to-br from-blue-100 via-pink-100 via-yellow-100 to-green-100 backdrop-blur-xl rounded-2xl shadow-2xl rainbow-border-glow animate-card-pop">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex-1">
+          {/* <div className="flex-1">
             <div className="flex items-center space-x-2">
               <div className="p-3 bg-gradient-to-tr from-blue-200 via-pink-200 to-yellow-200 rounded-full text-accent-600 mr-4 animate-feature-glow">
                 <DollarSign className="h-5 w-5 text-primary-600" />
@@ -235,7 +241,7 @@ const AdminWithdrawals: React.FC = () => {
                 Refresh
               </Button>
             </div>
-          </div>
+          </div> */}
 
           <div className="flex items-center space-x-4 w-full md:w-auto">
             <div className="flex items-center space-x-2">
