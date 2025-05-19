@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { getFromStorage, setToStorage, getAllUsers } from '../utils/localStorageService';
+import { getFromStorage, setToStorage, getAllUsers, apiCall } from '../utils/localStorageService';
 import axios from 'axios';
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
@@ -124,6 +124,8 @@ export const createWithdrawalRequest = async (
       requestDate: new Date().toISOString(),
     };
 
+    await apiCall('post', "/api/db/withdrawalRequests", newRequest);
+
     const withdrawalRequests = getFromStorage<WithdrawalRequest[]>('withdrawal_requests') || [];
     withdrawalRequests.push(newRequest);
     setToStorage('withdrawal_requests', withdrawalRequests);
@@ -139,7 +141,7 @@ export const createWithdrawalRequest = async (
 // Get all withdrawal requests
 export const getWithdrawalRequests = async (userId?: string): Promise<WithdrawalRequest[]> => {
   try {
-   const url = userId
+    const url = userId
       ? `${serverUrl}/api/db/withdrawalRequests?userId=${userId}`
       : `${serverUrl}/api/db/withdrawalRequests`;
 
