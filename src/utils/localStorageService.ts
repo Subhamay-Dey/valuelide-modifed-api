@@ -610,79 +610,99 @@ export const getKycDocuments = async (userId: string): Promise<any[]> => {
   }
 };
 
+// Helper: Find the first available spot in the given position (left/right) branch
+function findAvailableSpotInBranch(root: NetworkMember, position: 'left' | 'right'): NetworkMember | null {
+  let queue: (NetworkMember | undefined)[] = [root];
+  while (queue.length > 0) {
+    let node = queue.shift();
+    if (!node) continue;
+    if (!node.children) node.children = [];
+    const idx = position === 'left' ? 0 : 1;
+    if (!node.children[idx]) {
+      return node;
+    } else {
+      queue.push(node.children[idx]);
+    }
+  }
+  return null;
+}
 
+// Helper: Find the deepest available spot in the given position (left/right) branch
+function findDeepestAvailableSpot(root: NetworkMember, position: 'left' | 'right'): NetworkMember {
+  let node = root;
+  while (node.children && node.children[position === 'left' ? 0 : 1]) {
+    node = node.children[position === 'left' ? 0 : 1];
+  }
+  return node;
+}
 
 // Add a new user with all related fresh data
-export const addNewUserWithData = async (user: User, sponsorId?: string, position?: 'left' | 'right'): Promise<void> => {
+export const addNewUserWithData = async (user: User, sponsorId?: string, position?: 'left' | 'right', referralCodeForRegistration?: string): Promise<void> => {
   console.log("============== ADDING NEW USER WITH DATA ==============");
   console.log("Adding new user:", user.name, "with referral code:", user.referralCode);
   console.log("Sponsor ID:", user.sponsorId || "NONE");
 
   // Add user to users array
-  const users = await getAllUsers();
+  const allUsers = await getAllUsers();
 
   // Check if user with this ID or referral code already exists to avoid duplication
-  const existingUserIndex = users.findIndex(u =>
+  const existingUserIndex = allUsers.findIndex(u =>
     u.id === user.id || u.referralCode === user.referralCode
   );
 
   if (existingUserIndex >= 0) {
     console.log(`User with ID ${user.id} or referral code ${user.referralCode} already exists. Updating instead of adding.`);
-    users[existingUserIndex] = user;
+    allUsers[existingUserIndex] = user;
   } else {
-    users.push(user);
+    allUsers.push(user);
   }
 
-  setToStorage(STORAGE_KEYS.USERS, users);
-  console.log(`Users array now contains ${users.length} users`);
+  setToStorage(STORAGE_KEYS.USERS, allUsers);
+  console.log(`Users array now contains ${allUsers.length} users`);
 
   // Create and add fresh network member data
   const networkMember = createFreshNetworkMember(user);
 
   // If this user has a sponsor and position, update the sponsor's network
-  if (sponsorId && position) {
-    // Find the sponsor by their distributorId or referralCode
-    const sponsor = users.find(u => u.distributorId === sponsorId || u.referralCode === sponsorId);
+  if ((sponsorId || referralCodeForRegistration) && position) {
+    let sponsor: User | undefined = undefined;
+    if (sponsorId) {
+      sponsor = allUsers.find((u: User) => u.distributorId === sponsorId || u.referralCode === sponsorId);
+    } else if (referralCodeForRegistration) {
+      sponsor = allUsers.find((u: User) => u.referralCode === referralCodeForRegistration);
+    }
     if (sponsor) {
-      // Fetch sponsor's network data
-      const sponsorNetworkData = await getUserNetworkMembers(sponsor.id);
-      if (!sponsorNetworkData.children) sponsorNetworkData.children = [];
-      // Place user in left or right position
-      if (position === 'left') {
-        if (!sponsorNetworkData.children[0]) {
-          sponsorNetworkData.children[0] = {
-            id: user.id,
-            name: user.name,
-            profilePicture: user.profilePicture || '',
-            referralCode: user.referralCode,
-            joinDate: user.registrationDate,
-            active: true,
-            children: []
-          };
-        } else {
-          sponsorNetworkData.children.splice(0, 0, {
-            id: user.id,
-            name: user.name,
-            profilePicture: user.profilePicture || '',
-            referralCode: user.referralCode,
-            joinDate: user.registrationDate,
-            active: true,
-            children: []
-          });
-        }
-      } else if (position === 'right') {
-        sponsorNetworkData.children[1] = {
+      const sponsorNetworkKey = `mlm_network_members_${sponsor.id}`;
+      let sponsorNetwork = getFromStorage<NetworkMember>(sponsorNetworkKey) || {
+        id: sponsor.id,
+        name: sponsor.name,
+        profilePicture: sponsor.profilePicture || '',
+        referralCode: sponsor.referralCode,
+        joinDate: sponsor.registrationDate,
+        active: true,
+        children: [],
+      };
+      // If registering with referral code and position, use deepest placement
+      let spot: NetworkMember | null = null;
+      if (referralCodeForRegistration) {
+        spot = findDeepestAvailableSpot(sponsorNetwork, position);
+      } else {
+        spot = findAvailableSpotInBranch(sponsorNetwork, position);
+      }
+      if (spot) {
+        if (!spot.children) spot.children = [];
+        const idx = position === 'left' ? 0 : 1;
+        spot.children[idx] = {
           id: user.id,
           name: user.name,
           profilePicture: user.profilePicture || '',
           referralCode: user.referralCode,
           joinDate: user.registrationDate,
           active: true,
-          children: []
+          children: [],
         };
+        setToStorage(sponsorNetworkKey, sponsorNetwork);
       }
-      // Save updated sponsor network
-      setToStorage(`mlm_network_members_${sponsor.id}`, sponsorNetworkData);
     }
   } else {
     console.log("User has no sponsor - will be at the top level of their own network");
@@ -708,11 +728,31 @@ export const addNewUserWithData = async (user: User, sponsorId?: string, positio
   console.log(`Completed setting up data for new user: ${user.name} (${user.id})`);
 
   // Log all users' referral codes for debugging
-  console.log("All users and their referral codes after update:");
-  getAllUsers().forEach(u => {
+  allUsers.forEach((u: User) => {
     console.log(`- ${u.name}: Referral Code=${u.referralCode}, SponsorId=${u.sponsorId || "NONE"}`);
   });
   console.log("============== FINISHED ADDING NEW USER ==============");
+
+  // --- MLM COMMISSION LOGIC ---
+  // 1. Direct Referral Bonus
+  if (user.sponsorId) {
+    const allUsersForCommission = await getAllUsers();
+    const sponsor = allUsersForCommission.find(u => u.distributorId === user.sponsorId || u.referralCode === user.sponsorId);
+    if (sponsor) {
+      await addReferralBonusTransaction(sponsor.id, user.id, user.name);
+
+      // 2. Team Matching Bonus (if sponsor now has both left and right children)
+      // Find sponsor's left and right children
+      const leftChild = allUsersForCommission.find(u => u.sponsorId === sponsor.distributorId && u.position === 'left');
+      const rightChild = allUsersForCommission.find(u => u.sponsorId === sponsor.distributorId && u.position === 'right');
+      if (leftChild && rightChild) {
+        // Only add one pair per registration
+        await addTeamMatchingBonus(sponsor.id, 1);
+      }
+    }
+  }
+  // 3. (Optional) Royalty and Repurchase Bonus can be triggered on sales/repurchase events, not on registration
+  // --- END MLM COMMISSION LOGIC ---
 };
 
 // Admin specific functions
@@ -748,8 +788,8 @@ export const deleteUser = async (userId: string): Promise<boolean> => {
     });
 
     // Remove from KYC requests
-    const kycRequests = getAllKycRequests();
-    const updatedKycRequests = kycRequests.filter(req => req.userId !== userId);
+    const kycRequests = await getAllKycRequests();
+    const updatedKycRequests = kycRequests.filter((req: KycRequest) => req.userId !== userId);
     setToStorage(STORAGE_KEYS.KYC_REQUESTS, updatedKycRequests);
 
     // Remove user's transactions
@@ -811,7 +851,7 @@ export const deleteUser = async (userId: string): Promise<boolean> => {
   }
 };
 
-export const updateUserKycStatus = async (kycId: string, userId: string, status: KYCStatus, reviewNotes?: string): boolean => {
+export const updateUserKycStatus = async (kycId: string, userId: string, status: KYCStatus, reviewNotes?: string): Promise<boolean> => {
   try {
     const users = await getAllUsers();
     const userIndex = users.findIndex(user => user.id === userId);
@@ -1013,7 +1053,7 @@ export const addKycSubmission = async (submission: KycSubmission): Promise<void>
 
     const updatedSubmission = await apiCall('post', '/api/db/kycRequests', { submission, userId, userName })
 
-    const history = getKycSubmissionHistory();
+    const history = await getKycSubmissionHistory();
     history.push(updatedSubmission);
 
     localStorage.setItem(`kycHistory_${currentUser.id}`, JSON.stringify(history));
@@ -1099,7 +1139,7 @@ export const addReferralBonusTransaction = async (sponsorId: string, referredUse
 
   // Get the admin user (for admin fee allocation)
   const allUsers = await getAllUsers();
-  const adminUser = allUsers.find(user => user.email === 'admin@example.com'); // Assuming admin has this email
+  const adminUser: User | undefined = allUsers.find((user: User) => user.email === 'admin@example.com'); // Assuming admin has this email
 
   if (adminUser) {
     // Add the admin fee to the admin's wallet
@@ -1234,7 +1274,7 @@ export const checkAndUpdateMissingReferralBonuses = async (userId: string): Prom
 
     if (!hasBonus) {
       console.log(`No referral bonus found for referred user ${referredUser.name}, adding it now`);
-      addReferralBonusTransaction(userId, referredUser.id, referredUser.name);
+      await addReferralBonusTransaction(userId, referredUser.id, referredUser.name);
     } else {
       console.log(`Referral bonus already exists for ${referredUser.name}`);
     }
@@ -1320,7 +1360,7 @@ export const addTeamMatchingBonus = async(userId: string, pairs: number): Promis
 
   // Get the admin user (for admin fee allocation)
   const allUsers = await getAllUsers();
-  const adminUser = allUsers.find(user => user.email === 'admin@example.com'); // Assuming admin has this email
+  const adminUser: User | undefined = allUsers.find((user: User) => user.email === 'admin@example.com'); // Assuming admin has this email
 
   if (adminUser) {
     // Add the admin fee to the admin's wallet
@@ -1558,7 +1598,7 @@ export const addRoyaltyBonus = async (userId: string, turnoverAmount: number): P
 
   // Get the admin user (for admin fee allocation)
   const allUsers = await getAllUsers();
-  const adminUser = allUsers.find(user => user.email === 'admin@example.com'); // Assuming admin has this email
+  const adminUser: User | undefined = allUsers.find((user: User) => user.email === 'admin@example.com'); // Assuming admin has this email
 
   if (adminUser) {
     // Add the admin fee to the admin's wallet
@@ -1703,7 +1743,7 @@ export const addRepurchaseBonus = (userId: string, productAmount: number, produc
 
   // Get the admin user (for admin fee allocation)
   const allUsers = getAllUsers();
-  const adminUser = allUsers.find(user => user.email === 'admin@example.com'); // Assuming admin has this email
+  const adminUser: User | undefined = allUsers.find((user: User) => user.email === 'admin@example.com'); // Assuming admin has this email
 
   if (adminUser) {
     // Add the admin fee to the admin's wallet
@@ -1793,16 +1833,16 @@ export const addRepurchaseBonus = (userId: string, productAmount: number, produc
 };
 
 // Clear all data from local storage
-export const clearLocalDatabase = (): void => {
+export const clearLocalDatabase = async (): Promise<void> => {
   try {
     // Clear all MLM-related data using storage keys
-    Object.values(STORAGE_KEYS).forEach(key => {
+    Object.values(STORAGE_KEYS).forEach((key: string) => {
       safeRemoveItem(key);
     });
 
     // Clear any user-specific data
-    const users = getAllUsers();
-    users.forEach(user => {
+    const users = await getAllUsers();
+    users.forEach((user: User) => {
       const userSpecificKeys = [
         `${STORAGE_KEYS.NETWORK_MEMBERS}_${user.id}`,
         `${STORAGE_KEYS.NETWORK_STATS}_${user.id}`,
@@ -1810,7 +1850,7 @@ export const clearLocalDatabase = (): void => {
         `${STORAGE_KEYS.DASHBOARD_STATS}_${user.id}`
       ];
 
-      userSpecificKeys.forEach(key => {
+      userSpecificKeys.forEach((key: string) => {
         safeRemoveItem(key);
       });
     });
@@ -1878,4 +1918,47 @@ export default {
   addRoyaltyBonus,
   addRepurchaseBonus,
   clearLocalDatabase
+};
+
+/**
+ * Check if a position (left/right) is available under a sponsor/referrer in the network tree.
+ * @param sponsorId - The sponsor's user ID
+ * @param position - 'left' or 'right'
+ * @param isReferral - If true, check the deepest available spot (for referral code registration)
+ * @returns Promise<boolean> - true if available, false if occupied
+ */
+export const isNetworkPositionAvailable = async (
+  sponsorId: string,
+  position: 'left' | 'right',
+  isReferral: boolean = false
+): Promise<boolean> => {
+  // Try to get the sponsor's network from API or localStorage
+  const sponsorNetworkKey = `mlm_network_members_${sponsorId}`;
+  let sponsorNetwork: NetworkMember | null = null;
+  try {
+    sponsorNetwork = await apiCall('get', `/api/db/network/${sponsorId}`);
+  } catch (e) {
+    sponsorNetwork = getFromStorage<NetworkMember>(sponsorNetworkKey);
+  }
+  if (!sponsorNetwork) return true; // If no network data, assume available
+
+  // Helper to traverse to the correct spot
+  const getDeepestNode = (root: NetworkMember, pos: 'left' | 'right'): NetworkMember => {
+    let node = root;
+    while (node.children && node.children[pos === 'left' ? 0 : 1]) {
+      node = node.children[pos === 'left' ? 0 : 1];
+    }
+    return node;
+  };
+
+  if (isReferral) {
+    // For referral code, check the deepest available spot in the branch
+    const spot = getDeepestNode(sponsorNetwork, position);
+    const idx = position === 'left' ? 0 : 1;
+    return !spot.children || !spot.children[idx];
+  } else {
+    // For sponsor, check direct left/right child
+    const idx = position === 'left' ? 0 : 1;
+    return !sponsorNetwork.children || !sponsorNetwork.children[idx];
+  }
 }; 

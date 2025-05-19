@@ -4,7 +4,7 @@ import { Eye, EyeOff, Lock, Mail, User, Phone, MapPin, Users, Award, Target, Shi
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import { v4 as uuidv4 } from 'uuid';
-import { addNewUserWithData, setToStorage, updateCurrentUser, getAllUsers } from '../utils/localStorageService';
+import { addNewUserWithData, setToStorage, updateCurrentUser, getAllUsers, getFromStorage, isNetworkPositionAvailable } from '../utils/localStorageService';
 import { KYCStatus, User as UserType } from '../types';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
@@ -50,6 +50,7 @@ const Register: React.FC = () => {
   const [sponsorPosition, setSponsorPosition] = useState<'left' | 'right' | null>(null);
   const [referralPosition, setReferralPosition] = useState<'left' | 'right' | null>(null);
   const [sponsorInfo, setSponsorInfo] = useState<{name: string}|null>(null);
+  const [popupMessage, setPopupMessage] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -137,10 +138,6 @@ const Register: React.FC = () => {
     if (!formData.password) newErrors.password = 'Password is required';
     else if (formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
     if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
-    if (!formData.sponsorId && !referralCode && !formData.manualReferralCode) {
-      newErrors.sponsorId = 'Sponsor ID or Referral Code is required';
-      newErrors.manualReferralCode = 'Sponsor ID or Referral Code is required';
-    }
     if (formData.sponsorId && !sponsorPosition) {
       newErrors.sponsorPosition = 'Please select a position (Left or Right) for Sponsor ID';
     }
@@ -167,19 +164,39 @@ const Register: React.FC = () => {
       if (formData.sponsorId) {
         sponsor = users.find(user => user.distributorId === formData.sponsorId || user.referralCode === formData.sponsorId);
         position = sponsorPosition;
+        if (sponsor && position) {
+          // Check if position is available using the new utility
+          const available = await isNetworkPositionAvailable(sponsor.distributorId, position, false);
+          if (!available) {
+            setPopupMessage(`The ${position} position under sponsor ${sponsor.name} is already occupied. Please choose another position or sponsor.`);
+            setIsLoading(false);
+            return;
+          }
+        }
       } else if (useManualReferral && formData.manualReferralCode) {
         sponsor = users.find(user => user.referralCode.toUpperCase() === formData.manualReferralCode.toUpperCase());
         usedReferralCode = formData.manualReferralCode.toUpperCase();
         position = referralPosition;
+        if (sponsor && position) {
+          const available = await isNetworkPositionAvailable(sponsor.distributorId, position, true);
+          if (!available) {
+            setPopupMessage(`The ${position} position under referrer ${sponsor.name} is already occupied. Please choose another position or referrer.`);
+            setIsLoading(false);
+            return;
+          }
+        }
       } else if (referralCode) {
         sponsor = users.find(user => user.referralCode.toUpperCase() === referralCode.toUpperCase() || user.distributorId.toUpperCase() === referralCode.toUpperCase());
         usedReferralCode = referralCode.toUpperCase();
         position = referralPosition;
-      }
-      if (!sponsor) {
-        setErrors({ sponsorId: 'Sponsor or referrer not found.' });
-        setIsLoading(false);
-        return;
+        if (sponsor && position) {
+          const available = await isNetworkPositionAvailable(sponsor.distributorId, position, true);
+          if (!available) {
+            setPopupMessage(`The ${position} position under referrer ${sponsor.name} is already occupied. Please choose another position or referrer.`);
+            setIsLoading(false);
+            return;
+          }
+        }
       }
       const distributorId = "VL" + Math.floor(100 + Math.random() * 900);
       const newUser = {
@@ -189,7 +206,7 @@ const Register: React.FC = () => {
         address: formData.address,
         distributorId: distributorId,
         profilePicture: '',
-        sponsorId: sponsor.distributorId,
+        sponsorId: sponsor ? sponsor.distributorId : null,
         referralCode: distributorId,
         registrationDate: new Date().toISOString(),
         kycStatus: 'pending' as KYCStatus,
@@ -200,7 +217,7 @@ const Register: React.FC = () => {
       };
       const response = await axios.post(`${serverUrl}/api/db/users`, {
         newUser,
-        sponsorId: sponsor.distributorId,
+        sponsorId: sponsor ? sponsor.distributorId : null,
         position,
         referralCode: usedReferralCode || undefined
       });
@@ -597,6 +614,19 @@ const Register: React.FC = () => {
                 </Button>
               </div>
             </form>
+
+            {/* Popup Modal for position taken */}
+            {popupMessage && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full text-center">
+                  <div className="mb-4 text-lg font-semibold text-red-600">Position Unavailable</div>
+                  <div className="mb-6 text-gray-700">{popupMessage}</div>
+                  <Button variant="primary" onClick={() => setPopupMessage(null)}>
+                    OK
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="mt-8 text-center" data-aos="fade-up" data-aos-delay="1000">
               <p className="text-sm text-gray-600">

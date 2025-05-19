@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Package, FileCheck, LogOut, DollarSign, Wallet, RefreshCw, IndianRupee } from 'lucide-react';
+import { Users, Package, FileCheck, LogOut, DollarSign, Wallet, RefreshCw, IndianRupee, BarChart3, Award, Repeat } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import AdminLayout from '../components/layout/AdminLayout';
-import { getAllKycRequests, getAdminStats, getAllTransactions, getAllUsersForAdmin, KycRequest } from '../utils/localStorageService';
+import { getAllKycRequests, getAdminStats, getAllTransactions as getAllTransactionsLocal, getAllUsersForAdmin, KycRequest, getUserDashboardStats } from '../utils/localStorageService';
+import { getAllTransactions as getAllTransactionsDb } from '../utils/jsonDbService';
 import { Transaction, User } from '../types';
 import axios from 'axios';
 
@@ -28,6 +29,8 @@ const AdminDashboard: React.FC = () => {
     timestamp: string;
     timeAgo: string;
   }>>([]);
+  const [adminStats, setAdminStats] = useState<any>(null);
+  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
 
   // Check for admin authentication
   useEffect(() => {
@@ -36,6 +39,8 @@ const AdminDashboard: React.FC = () => {
       navigate('/admin/login');
     } else {
       loadDashboardData();
+      loadAdminStats();
+      loadRecentTransactions();
     }
   }, [navigate]);
 
@@ -113,6 +118,22 @@ const AdminDashboard: React.FC = () => {
     } catch (error: any) {
       console.error(error);
     }
+  };
+
+  const loadAdminStats = async () => {
+    const users = getAllUsersForAdmin();
+    const adminUser = users.find((u: User) => u.email === 'admin@example.com');
+    if (adminUser) {
+      const stats = getUserDashboardStats(adminUser.id);
+      setAdminStats(stats);
+    }
+  };
+
+  const loadRecentTransactions = async () => {
+    const transactions = await getAllTransactionsDb();
+    // Sort by date descending and take latest 10
+    const sorted = transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setRecentTransactions(sorted.slice(0, 10));
   };
 
   // Helper function to format time ago
@@ -238,6 +259,62 @@ const AdminDashboard: React.FC = () => {
         </Card>
       </div>
 
+      {/* Admin Commission/Bonus Breakdown */}
+      {adminStats && (
+        <Card title="Admin Commission & Bonus Breakdown" className="mb-8">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center bg-white rounded-xl shadow p-4 border border-neutral-100">
+              <div className="bg-yellow-500 p-3 rounded-full flex items-center justify-center mr-4">
+                <Users className="h-7 w-7 text-white" />
+              </div>
+              <div className="flex-grow">
+                <div className="font-bold text-neutral-800">Referral Bonus (Admin Share)</div>
+                <div className="text-xs text-neutral-500">Admin's share of all direct referral bonuses</div>
+              </div>
+              <div className="text-right font-extrabold text-lg text-primary-700 min-w-[80px]">
+                ₹{adminStats.earningsByType.referral_bonus?.toFixed(2) || '0.00'}
+              </div>
+            </div>
+            <div className="flex items-center bg-white rounded-xl shadow p-4 border border-neutral-100">
+              <div className="bg-green-500 p-3 rounded-full flex items-center justify-center mr-4">
+                <BarChart3 className="h-7 w-7 text-white" />
+              </div>
+              <div className="flex-grow">
+                <div className="font-bold text-neutral-800">Team Matching (Admin Share)</div>
+                <div className="text-xs text-neutral-500">Admin's share of all matching bonuses</div>
+              </div>
+              <div className="text-right font-extrabold text-lg text-primary-700 min-w-[80px]">
+                ₹{adminStats.earningsByType.team_matching?.toFixed(2) || '0.00'}
+              </div>
+            </div>
+            <div className="flex items-center bg-white rounded-xl shadow p-4 border border-neutral-100">
+              <div className="bg-purple-500 p-3 rounded-full flex items-center justify-center mr-4">
+                <Award className="h-7 w-7 text-white" />
+              </div>
+              <div className="flex-grow">
+                <div className="font-bold text-neutral-800">Royalty Bonus (Admin Share)</div>
+                <div className="text-xs text-neutral-500">Admin's share of all royalty bonuses</div>
+              </div>
+              <div className="text-right font-extrabold text-lg text-primary-700 min-w-[80px]">
+                ₹{adminStats.earningsByType.royalty_bonus?.toFixed(2) || '0.00'}
+              </div>
+            </div>
+            <div className="flex items-center bg-white rounded-xl shadow p-4 border border-neutral-100">
+              <div className="bg-blue-500 p-3 rounded-full flex items-center justify-center mr-4">
+                <Repeat className="h-7 w-7 text-white" />
+              </div>
+              <div className="flex-grow">
+                <div className="font-bold text-neutral-800">Repurchase Bonus (Admin Share)</div>
+                <div className="text-xs text-neutral-500">Admin's share of all repurchase bonuses</div>
+              </div>
+              <div className="text-right font-extrabold text-lg text-primary-700 min-w-[80px]">
+                ₹{adminStats.earningsByType.repurchase_bonus?.toFixed(2) || '0.00'}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Quick Actions */}
       <div className="mb-8">
         <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
@@ -274,28 +351,25 @@ const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Recent Activity */}
-      <Card title="Recent Activity">
+      {/* Recent Transactions */}
+      <Card title="Recent Transactions">
         <div className="space-y-4">
-          {recentActivity.length > 0 ? (
-            recentActivity.map((activity, index) => (
-              <div key={index} className="flex items-center justify-between py-2 border-b border-neutral-200 last:border-b-0">
+          {recentTransactions.length > 0 ? (
+            recentTransactions.map((tx, idx) => (
+              <div key={tx.id || idx} className="flex items-center justify-between py-2 border-b border-neutral-200 last:border-b-0">
                 <div>
-                  <p className="text-neutral-900 font-medium">
-                    {activity.type === 'kyc' && 'New KYC submission'}
-                    {activity.type === 'referral_bonus' && 'Referral Bonus'}
-                    {activity.type === 'level_commission' && 'Level Commission'}
-                    {activity.type === 'milestone_reward' && 'Milestone Reward'}
-                    {activity.type === 'withdrawal' && 'Withdrawal Request'}
-                    {activity.type === 'withdrawal_reversal' && 'Withdrawal Reversal'}
-                  </p>
-                  <p className="text-xs text-neutral-500">{activity.details}</p>
+                  <p className="text-neutral-900 font-medium capitalize">{tx.type.replace(/_/g, ' ')}</p>
+                  <p className="text-xs text-neutral-500">{tx.description}</p>
                 </div>
-                <p className="text-xs text-neutral-500">{activity.timeAgo}</p>
+                <div className="flex flex-col items-end">
+                  <span className={`text-sm font-semibold ${tx.type === 'withdrawal' ? 'text-error-600' : 'text-success-600'}`}>{tx.type === 'withdrawal' ? '-' : '+'}₹{tx.amount}</span>
+                  <span className="text-xs text-neutral-500">{new Date(tx.date).toLocaleString()}</span>
+                  <span className={`text-xs mt-1 px-2 py-0.5 rounded ${tx.status === 'completed' ? 'bg-green-100 text-green-700' : tx.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{tx.status}</span>
+                </div>
               </div>
             ))
           ) : (
-            <p className="text-neutral-500 text-center py-4">No recent activity</p>
+            <p className="text-neutral-500 text-center py-4">No recent transactions</p>
           )}
         </div>
       </Card>

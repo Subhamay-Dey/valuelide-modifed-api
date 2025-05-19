@@ -135,77 +135,51 @@ const AdminUsers: React.FC = () => {
     });
   };
 
-  const handleViewNetwork = async (user: UserData) => {
-    setSelectedUser(user);
-    setShowNetwork(true);
+  // Helper: Build a 1:2 binary tree from a flat user list
+  function buildBinaryTree(rootUser: UserType, allUsers: UserType[]): NetworkMember {
+    // Map users by their sponsorId
+    const userMap = new Map<string | undefined, UserType[]>();
+    allUsers.forEach((user: UserType) => {
+      const sponsorKey = user.sponsorId === null ? undefined : user.sponsorId;
+      if (!userMap.has(sponsorKey)) userMap.set(sponsorKey, []);
+      userMap.get(sponsorKey)!.push(user);
+    });
 
-    // Fetch the specific user's network data
-    let userNetworkData
-    const userNetwork = await getUserNetworkMembers(user.id);
-    let hadToCreateNetworkData = false;
-
-    // If user network data is empty or doesn't have proper structure, build it
-    if (!userNetworkData || !userNetwork.id || !userNetwork.children) {
-      console.log(`No network data found for user ${user.name}, creating it now`);
-      hadToCreateNetworkData = true;
-
-      // Get all users to build the network structure
-      const allUsers = await getAllUsers();
-      console.log(`All users: ${allUsers}`);
-
-      // Find direct referrals (users sponsored by this user)
-      const directReferrals = allUsers.filter(u =>
-        u.sponsorId === user.id ||
-        (u.sponsorId && user.referralCode && u.sponsorId.toUpperCase() === user.referralCode.toUpperCase())
-      );
-
-      // Create network structure
-      userNetworkData = {
+    // Recursive function to build tree
+    function buildNode(user: UserType): NetworkMember {
+      const children = (userMap.get(user.referralCode) || []).slice(0, 2);
+      return {
         id: user.id,
         name: user.name,
         profilePicture: user.profilePicture || '',
         referralCode: user.referralCode,
         joinDate: user.registrationDate,
         active: true,
-        children: directReferrals.map(directRef => {
-          // Find level 2 children for this direct referral
-          const level2Children = allUsers.filter(u =>
-            (u.sponsorId === directRef.id) ||
-            (u.sponsorId && directRef.referralCode && u.sponsorId.toUpperCase() === directRef.referralCode.toUpperCase())
-          );
-
-          return {
-            id: directRef.id,
-            name: directRef.name,
-            profilePicture: directRef.profilePicture || '',
-            referralCode: directRef.referralCode,
-            joinDate: directRef.registrationDate,
-            active: true,
-            children: level2Children.map(l2 => ({
-              id: l2.id,
-              name: l2.name,
-              profilePicture: l2.profilePicture || '',
-              referralCode: l2.referralCode,
-              joinDate: l2.registrationDate,
-              active: true,
-              children: []
-            }))
-          };
-        })
+        children: children.map(buildNode),
       };
+    }
 
-      // Save the generated network structure back to localStorage
-      if (hadToCreateNetworkData) {
-        const userNetworkKey = `mlm_network_members_${user.id}`;
-        setToStorage(userNetworkKey, userNetworkData);
-        console.log(`Created and saved network data for user ${user.name} at key: ${userNetworkKey}`);
-      }
+    return buildNode(rootUser);
+  }
+
+  const handleViewNetwork = async (user: UserData) => {
+    setSelectedUser(user);
+    setShowNetwork(true);
+
+    // Get all users to build the network structure
+    const allUsers = await getAllUsers();
+    const userNetworkData = buildBinaryTree(user, allUsers);
+
+    // Save the generated network structure back to localStorage (optional, as before)
+    if (userNetworkData) {
+      const userNetworkKey = `mlm_network_members_${user.id}`;
+      setToStorage(userNetworkKey, userNetworkData);
+      console.log(`Created and saved network data for user ${user.name} at key: ${userNetworkKey}`);
     }
 
     setNetworkData(userNetworkData);
-
     console.log(`Loaded network for user: ${user.name}`, userNetworkData);
-    console.log(`Direct children count: ${userNetworkData.children?.length || 0}`);
+    console.log(`Direct children count: ${userNetworkData?.children?.length || 0}`);
   };
 
   const handleEditToggle = () => {

@@ -257,13 +257,16 @@ const NetworkTreeView: React.FC<NetworkTreeViewProps> = ({ data }) => {
           />
         }
       >
-        {member.children.map((child, index) => {
+        {member.children && member.children.length > 0 && member.children.map((child, index) => {
           if (!child || !child.id) {
             console.log("Warning: Invalid child at index", index);
             return null;
           }
           return (
             <React.Fragment key={child.id || `child-${index}`}>
+              <div style={{ textAlign: 'center', color: '#0F52BA', fontWeight: 500, fontSize: '12px', marginBottom: '2px' }}>
+                {index === 0 ? 'Left' : index === 1 ? 'Right' : ''}
+              </div>
               {renderTreeNodes(child)}
             </React.Fragment>
           );
@@ -313,7 +316,7 @@ const NetworkTreeView: React.FC<NetworkTreeViewProps> = ({ data }) => {
         </Button>
       )}
 
-      <div className="min-w-max pb-10">
+      <div className="pb-10" style={{ overflowX: 'auto', overflowY: 'auto', minWidth: 800, minHeight: 500, maxWidth: '100vw', maxHeight: '70vh' }}>
         <Tree
           lineWidth="2px"
           lineColor="#0F52BA"

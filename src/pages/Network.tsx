@@ -57,6 +57,32 @@ interface ReferralUser {
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 
+// Helper: Build a 1:2 binary tree from a flat user list
+function buildBinaryTree(rootUser: User, allUsers: User[]): NetworkMember {
+  // Map users by their sponsorId
+  const userMap = new Map<string | undefined, User[]>();
+  allUsers.forEach((user: User) => {
+    if (!userMap.has(user.sponsorId)) userMap.set(user.sponsorId, []);
+    userMap.get(user.sponsorId)!.push(user);
+  });
+
+  // Recursive function to build tree
+  function buildNode(user: User): NetworkMember {
+    const children = (userMap.get(user.referralCode) || []).slice(0, 2);
+    return {
+      id: user.id,
+      name: user.name,
+      profilePicture: user.profilePicture || '',
+      referralCode: user.referralCode,
+      joinDate: user.registrationDate,
+      active: true,
+      children: children.map(buildNode),
+    };
+  }
+
+  return buildNode(rootUser);
+}
+
 const Network: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"tree" | "list">("list");
   const [networkData, setNetworkData] = useState<NetworkMember | null>(null);
@@ -183,39 +209,7 @@ const Network: React.FC = () => {
         ...indirectReferrals,
       ];
 
-      const treeData: NetworkMember = {
-        id: currentUser.id,
-        name: currentUser.name,
-        profilePicture: currentUser.profilePicture || "",
-        referralCode: currentUser.referralCode,
-        joinDate: currentUser.registrationDate,
-        active: true,
-        children: directReferrals.map((directRef) => {
-          const level2Children = allUsers.filter(
-            (u) =>
-              u.sponsorId &&
-              u.sponsorId.toUpperCase() === directRef.referralCode.toUpperCase()
-          );
-
-          return {
-            id: directRef.id,
-            name: directRef.name,
-            profilePicture: directRef.profilePicture || "",
-            referralCode: directRef.referralCode,
-            joinDate: directRef.registrationDate,
-            active: true,
-            children: level2Children.map((l2) => ({
-              id: l2.id,
-              name: l2.name,
-              profilePicture: l2.profilePicture || "",
-              referralCode: l2.referralCode,
-              joinDate: l2.registrationDate,
-              active: true,
-              children: [],
-            })),
-          };
-        }),
-      };
+      const treeData: NetworkMember = buildBinaryTree(currentUser, allUsers);
 
       console.log("Network tree structure created with root:", treeData.name);
       console.log("Direct children in tree:", treeData.children?.length || 0);

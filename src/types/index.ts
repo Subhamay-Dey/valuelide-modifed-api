@@ -25,6 +25,7 @@ export interface User {
     ifscCode: string;
   };
   password?: string;
+  position?: 'left' | 'right';
 }
 
 // Financial related types
