@@ -6,29 +6,16 @@ import Card from '../components/ui/Card';
 import StatCard from '../components/dashboard/StatCard';
 import TransactionList from '../components/dashboard/TransactionList';
 import { getUserDashboardStats, getFromStorage, getCurrentUser } from '../utils/localStorageService';
-import { DashboardStats } from '../types';
+import { DashboardStats, CommissionStructure } from '../types';
 import { formatCurrency, currencySymbol } from '../utils/currencyFormatter';
 
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [commissionStructure, setCommissionStructure] = useState<CommissionStructure | null>(null);
   const [userName, setUserName] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // useEffect(() => {
-  //   // Get the current logged in user ID
-  //   const loggedInUserId = getFromStorage<string>('logged_in_user');
-  //   const currentUser = getCurrentUser();
-
-  //   if (loggedInUserId && currentUser) {
-  //     // Get user-specific dashboard stats
-  //     const userDashboardStats = await getUserDashboardStats(loggedInUserId);
-  //     setStats(userDashboardStats);
-  //     setUserName(currentUser.name);
-  //   }
-
-  //   setIsLoading(false);
-  // }, []);
-    useEffect(() => {
+  useEffect(() => {
     const fetchDashboardStats = async () => {
       const loggedInUserId = getFromStorage<string>('logged_in_user');
       const currentUser = getCurrentUser();
@@ -47,6 +34,12 @@ const Dashboard: React.FC = () => {
     };
 
     fetchDashboardStats();
+
+    // Load commission structure
+    const savedCommissionStructure = localStorage.getItem('commissionStructure');
+    if (savedCommissionStructure) {
+      setCommissionStructure(JSON.parse(savedCommissionStructure));
+    }
   }, []);
 
   if (isLoading || !stats) {
@@ -186,11 +179,11 @@ const Dashboard: React.FC = () => {
                 </div>
                 <div className="flex-grow">
                   <div className="font-bold text-neutral-800">Team Matching</div>
-                  <div className="text-xs text-neutral-500">₹2,500 per pair (1:1)</div>
+                  <div className="text-xs text-neutral-500">
+                    ₹{commissionStructure?.teamMatchingBonus || 2500} per pair (1:1)
+                  </div>
                 </div>
-                {/* <div className="text-right font-extrabold text-lg text-primary-700 min-w-[80px]">
-                    {formatCurrency(stats.earningsByType.team_matching || 0)}
-                </div> */}
+                
               </div>
               {/* Royalty Bonus */}
               <div className="flex items-center bg-white rounded-xl shadow hover:shadow-lg transition p-4 border border-neutral-100">

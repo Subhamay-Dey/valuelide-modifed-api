@@ -27,7 +27,21 @@ const AdminSettings: React.FC = () => {
     royaltyBonus: 2,
     repurchaseBonus: 3
   });
-  
+
+  // Load saved commission settings
+  useEffect(() => {
+    const savedCommissionStructure = localStorage.getItem('commissionStructure');
+    if (savedCommissionStructure) {
+      const parsed = JSON.parse(savedCommissionStructure);
+      setCommissionSettings({
+        directReferralBonus: parsed.directReferralBonus,
+        matchingBonus: parsed.teamMatchingBonus,
+        royaltyBonus: parsed.royaltyBonus,
+        repurchaseBonus: parsed.repurchaseBonus
+      });
+    }
+  }, []);
+
   const [paymentSettings, setPaymentSettings] = useState({
     minimumWithdrawal: 500,
     withdrawalFee: 0,
@@ -62,6 +76,41 @@ const AdminSettings: React.FC = () => {
 
   const handleSaveSettings = () => {
     setLoading(true);
+    
+    // Save commission settings to localStorage
+    const commissionStructure = {
+      retailProfit: { min: 10, max: 20 },
+      directReferralBonus: commissionSettings.directReferralBonus,
+      teamMatchingBonus: commissionSettings.matchingBonus,
+      teamMatchingDailyCap: 20,
+      royaltyBonus: commissionSettings.royaltyBonus,
+      repurchaseBonus: commissionSettings.repurchaseBonus,
+      milestoneRewards: {
+        pairs: {
+          1: { type: 'Insurance', value: '₹15,00,000 Insurance' },
+          5: { type: 'Travel', value: 'TA & DA Eligibility' },
+          15: { type: 'Travel', value: 'Goa Tour' },
+          50: { type: 'Travel', value: 'Thailand Tour' },
+          100: { type: 'Product', value: 'Dell Laptop' },
+          250: { type: 'Travel', value: 'Singapore Tour' },
+          500: { type: 'Cash/Gold', value: '2.5 Lack Gold/Cash' },
+          1000: { type: 'Insurance', value: '1 Cr Health Insurance or 5 Lack Cash' },
+          2500: { type: 'Cash', value: '10 Lacks Car Fund' }
+        }
+      },
+      levelCommissions: {
+        1: 0.07,
+        2: 0.05,
+        3: 0.03,
+        4: 0.02,
+        5: 0.01
+      },
+      tdsPercentage: 5,
+      adminFeePercentage: 10,
+      repurchasePercentage: 3
+    };
+
+    localStorage.setItem('commissionStructure', JSON.stringify(commissionStructure));
     
     // Simulate API call to save settings
     setTimeout(() => {
