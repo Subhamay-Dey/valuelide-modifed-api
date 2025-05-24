@@ -19,6 +19,14 @@ import { Wallet as WalletType, DashboardStats, Transaction, User } from '../type
 import KycRequired from '../components/auth/KycRequired';
 import { formatCurrency, currencySymbol } from '../utils/currencyFormatter';
 import { getUserWithdrawalRequests, WithdrawalRequest } from '../services/walletService';
+import axios from 'axios';
+
+const API_BASE_URL = process.env.VITE_SERVER_URL || "https://valuelife-backend.onrender.com";
+
+type walletdata = {
+  userId: string;
+  balance: number;
+}
 
 const Wallet: React.FC = () => {
   const [showWithdrawForm, setShowWithdrawForm] = useState(false);
@@ -30,6 +38,8 @@ const Wallet: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<'transactions' | 'withdrawals'>('transactions');
+  const [error, setError] = useState<string | null>(null);
+  const [walletData, setWalletData] = useState<walletdata>();
   
   const loadData = async () => {
     setIsLoading(true);
@@ -66,6 +76,23 @@ const Wallet: React.FC = () => {
         setWithdrawalRequests(userWithdrawalRequests);
       } catch (error) {
         console.error('Error loading wallet data:', error);
+      }
+    }
+
+    if(loggedInUserId) {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/db/wallet/${loggedInUserId}`)
+        const data = response.data
+
+        if (data.success) {
+        setWalletData(data.data);
+      } else {
+        setError(data.message);
+      }
+
+      } catch (error) {
+        setError('Failed to fetch wallet balance');
+        console.error('Wallet fetch error:', error);
       }
     }
     
@@ -162,7 +189,7 @@ const Wallet: React.FC = () => {
             <div>
               <h2 className="text-lg font-medium text-neutral-700">Available Balance</h2>
               <div className="mt-2 flex items-baseline">
-                <span className="text-4xl font-bold text-neutral-900">{formatCurrency(wallet.balance)}</span>
+                <span className="text-4xl font-bold text-neutral-900">{walletData ? walletData?.balance : 0}</span>
                 {stats.pendingWithdrawals > 0 && (
                   <span className="ml-4 text-sm text-neutral-500 flex items-center">
                     <Clock className="h-4 w-4 mr-1" />

@@ -98,7 +98,7 @@ const AdminDashboard: React.FC = () => {
       // });
       if (Array.isArray(pendingKycRequests)) {
   pendingKycRequests.forEach((request: KycRequest) => {
-    const user = totalUsers.find(u => u.id === request.userId);
+    const user = totalUsers.find((u: { id: string; }) => u.id === request.userId);
     if (user) {
       allActivities.push({
         type: 'kyc',
@@ -112,7 +112,7 @@ const AdminDashboard: React.FC = () => {
 
       // Add transactions to activities
       totalTransactions.forEach((transaction: Transaction) => {
-        const user = totalUsers.find(u => u.id === transaction.userId);
+        const user = totalUsers.find((u: { id: string; }) => u.id === transaction.userId);
         if (user) {
           allActivities.push({
             type: transaction.type,
