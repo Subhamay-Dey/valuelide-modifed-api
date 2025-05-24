@@ -476,12 +476,12 @@ const Register: React.FC = () => {
 
                 {/* Sponsor ID Section */}
                 <div className="mb-6 p-4 border rounded-lg bg-gray-50">
-                  <div className="font-semibold text-gray-800 mb-2">Register with Sponsor ID</div>
+                  <div className="font-semibold text-gray-800 mb-2">Register with Position ID</div>
                   <Input
                     id="sponsorId"
                     name="sponsorId"
                     type="text"
-                    label="Sponsor ID"
+                    label="PositionId ID"
                     value={formData.sponsorId}
                     onChange={handleChange}
                     error={errors.sponsorId}
