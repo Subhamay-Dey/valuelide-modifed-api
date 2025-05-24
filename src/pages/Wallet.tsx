@@ -144,10 +144,10 @@ const Wallet: React.FC = () => {
     loadData();
   };
   
-  // const filteredTransactions = transactions.filter(transaction => {
-  //   if (filterStatus === 'all') return true;
-  //   return transaction.status === filterStatus;
-  // });
+  const filteredTransactions = transactions.filter(transaction => {
+    if (filterStatus === 'all') return true;
+    return transaction.status === filterStatus;
+  });
   
   if (isLoading) {
     return (
@@ -350,7 +350,7 @@ const Wallet: React.FC = () => {
             </div>
           </div>
           
-          <TransactionList transactions={transactions} showTitle={false} />
+          <TransactionList transactions={filteredTransactions} showTitle={false} />
           {transactions.length === 0 && (
             <div className="py-8 text-center">
               <p className="text-neutral-500">No transactions found</p>
