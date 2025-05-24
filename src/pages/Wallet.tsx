@@ -40,6 +40,7 @@ const Wallet: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'transactions' | 'withdrawals'>('transactions');
   const [error, setError] = useState<string | null>(null);
   const [walletData, setWalletData] = useState<walletdata>();
+  const [loading, setLoading] = useState(false);
   
   const loadData = async () => {
     setIsLoading(true);
@@ -50,7 +51,7 @@ const Wallet: React.FC = () => {
     
     // Get the current logged in user ID
     const loggedInUserId = user?.id || getFromStorage<string>('logged_in_user');
-    
+
     if (loggedInUserId) {
       try {
         console.log('Loading wallet data for user:', loggedInUserId);
@@ -59,18 +60,18 @@ const Wallet: React.FC = () => {
         localStorage.removeItem('_temp_wallet_cache');
         
         // Get user-specific wallet data with updated referral bonuses
-        const userWallet = getUserWalletWithUpdatedBonuses(loggedInUserId);
+        // const userWallet = getUserWalletWithUpdatedBonuses(loggedInUserId);
         const userDashboardStats = await getUserDashboardStats(loggedInUserId);
         const userTransactions = getUserTransactions(loggedInUserId);
         const userWithdrawalRequests = await getUserWithdrawalRequests(loggedInUserId);
         
-        console.log('Loaded wallet data:', {
-          balance: userWallet.balance,
-          transactions: userTransactions.length,
-          withdrawalRequests: userWithdrawalRequests.length
-        });
+        // console.log('Loaded wallet data:', {
+        //   balance: userWallet.balance,
+        //   transactions: userTransactions.length,
+        //   withdrawalRequests: userWithdrawalRequests.length
+        // });
         
-        setWallet(userWallet);
+        // setWallet(userWallet);
         setStats(userDashboardStats);
         setTransactions(userTransactions);
         setWithdrawalRequests(userWithdrawalRequests);
@@ -98,6 +99,41 @@ const Wallet: React.FC = () => {
     
     setIsLoading(false);
   };
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      setLoading(true);
+      try {
+
+        const user = getCurrentUser();
+        setCurrentUser(user);
+
+        const loggedInUserId = user?.id || getFromStorage<string>('logged_in_user');
+
+        if (loggedInUserId) {
+
+          const params = new URLSearchParams();
+          params.append('userId', loggedInUserId as string);
+
+          if (filterStatus !== 'all') {
+            params.append('status', filterStatus);
+          }
+
+          const response = await axios.get(`${API_BASE_URL}/api/db/transactions?${params.toString()}`)
+          const data = response.data;
+          console.log('Fetched transactions:', data);
+          setTransactions(data);
+        }
+
+      } catch (error) {
+        console.error('Wallet fetch error:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchTransactions();
+  }, [filterStatus])
+  
   
   useEffect(() => {
     loadData();
@@ -108,10 +144,10 @@ const Wallet: React.FC = () => {
     loadData();
   };
   
-  const filteredTransactions = transactions.filter(transaction => {
-    if (filterStatus === 'all') return true;
-    return transaction.status === filterStatus;
-  });
+  // const filteredTransactions = transactions.filter(transaction => {
+  //   if (filterStatus === 'all') return true;
+  //   return transaction.status === filterStatus;
+  // });
   
   if (isLoading) {
     return (
@@ -314,8 +350,8 @@ const Wallet: React.FC = () => {
             </div>
           </div>
           
-          <TransactionList transactions={filteredTransactions} showTitle={false} />
-          {filteredTransactions.length === 0 && (
+          <TransactionList transactions={transactions} showTitle={false} />
+          {transactions.length === 0 && (
             <div className="py-8 text-center">
               <p className="text-neutral-500">No transactions found</p>
             </div>
