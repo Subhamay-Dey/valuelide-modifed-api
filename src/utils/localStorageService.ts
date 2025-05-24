@@ -370,17 +370,36 @@ export const getUserWallet = (userId: string): Wallet => {
 };
 
 // Get user-specific dashboard stats
-export const getUserDashboardStats = (userId: string): DashboardStats => {
-  // Try to get user-specific dashboard stats first
-  const userStats = getFromStorage<DashboardStats>(`${STORAGE_KEYS.DASHBOARD_STATS}_${userId}`);
-  if (userStats) {
-    return userStats;
+// export const getUserDashboardStats = (userId: string): DashboardStats => {
+//   // Try to get user-specific dashboard stats first
+//   const userStats = getFromStorage<DashboardStats>(`${STORAGE_KEYS.DASHBOARD_STATS}_${userId}`);
+//   if (userStats) {
+//     return userStats;
+//   }
+
+//   // Fall back to default stats (for backward compatibility)
+//   return getDashboardStats();
+// };
+export const getUserDashboardStats = async (userId: string): Promise<DashboardStats> => {
+  try {
+    const response = await fetch(`${serverUrl}/api/db/stats/dashboard/${userId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data: DashboardStats = await response.json();
+    return data;
+  } catch (err) {
+    console.error('API error in getUserDashboardStats:', err);
+    return getDashboardStats(); // fallback to static defaults
   }
-
-  // Fall back to default stats (for backward compatibility)
-  return getDashboardStats();
 };
-
 // Transaction related functions
 export const getAllTransactions = async (): Promise<Transaction[]> => {
   // return getFromStorage<Transaction[]>(STORAGE_KEYS.TRANSACTIONS) || [];
@@ -837,8 +856,8 @@ export const deleteUser = async (userId: string): Promise<boolean> => {
           // Update sponsor's dashboard stats
           const sponsorDashboard = getUserDashboardStats(sponsor.id);
           if (sponsorDashboard) {
-            sponsorDashboard.directReferrals = Math.max(0, sponsorDashboard.directReferrals - 1);
-            sponsorDashboard.teamSize = Math.max(1, sponsorDashboard.teamSize - 1);
+            (await sponsorDashboard).directReferrals = Math.max(0, (await sponsorDashboard).directReferrals - 1);
+            (await sponsorDashboard).teamSize = Math.max(1, (await sponsorDashboard).teamSize - 1);
 
             setToStorage(`${STORAGE_KEYS.DASHBOARD_STATS}_${sponsor.id}`, sponsorDashboard);
           }
@@ -1165,18 +1184,24 @@ export const addReferralBonusTransaction = async (sponsorId: string, referredUse
     const adminDashboardStats = getUserDashboardStats(adminUser.id);
     if (adminDashboardStats) {
       // Update total earnings
-      adminDashboardStats.totalEarnings += adminFee;
+      (await
+        // Update total earnings
+        adminDashboardStats).totalEarnings += adminFee;
 
       // Update earnings by type
-      adminDashboardStats.earningsByType.referral_bonus =
-        (adminDashboardStats.earningsByType.referral_bonus || 0) + adminFee;
+      (await
+        // Update earnings by type
+        adminDashboardStats).earningsByType.referral_bonus =
+        ((await adminDashboardStats).earningsByType.referral_bonus || 0) + adminFee;
 
       // Add to admin's recent transactions
-      if (adminDashboardStats.recentTransactions.length > 10) {
+      if ((await adminDashboardStats).recentTransactions.length > 10) {
         // Keep only the 10 most recent transactions
-        adminDashboardStats.recentTransactions.pop();
+        (await
+          // Keep only the 10 most recent transactions
+          adminDashboardStats).recentTransactions.pop();
       }
-      adminDashboardStats.recentTransactions.unshift(adminBonusTransaction);
+      (await adminDashboardStats).recentTransactions.unshift(adminBonusTransaction);
 
       // Update the admin's dashboard stats
       setToStorage(`${STORAGE_KEYS.DASHBOARD_STATS}_${adminUser.id}`, adminDashboardStats);
@@ -1195,41 +1220,47 @@ export const addReferralBonusTransaction = async (sponsorId: string, referredUse
 
     // Add to earnings timeline with the net effect
     const today = new Date().toISOString().split('T')[0];
-    const timelineIndex = sponsorDashboardStats.earningsTimeline.findIndex(
+    const timelineIndex = (await sponsorDashboardStats).earningsTimeline.findIndex(
       entry => entry.date === today
     );
 
     if (timelineIndex >= 0) {
       // Update existing entry for today
-      sponsorDashboardStats.earningsTimeline[timelineIndex].amount += netBonusAmount;
+      (await
+        // Update existing entry for today
+        sponsorDashboardStats).earningsTimeline[timelineIndex].amount += netBonusAmount;
     } else {
       // Add new entry for today
       // Find the last entry to determine the new total
-      const lastEntryAmount = sponsorDashboardStats.earningsTimeline.length > 0
-        ? sponsorDashboardStats.earningsTimeline[sponsorDashboardStats.earningsTimeline.length - 1].amount
+      const lastEntryAmount = (await sponsorDashboardStats).earningsTimeline.length > 0
+        ? (await sponsorDashboardStats).earningsTimeline[(await sponsorDashboardStats).earningsTimeline.length - 1].amount
         : 0;
 
-      sponsorDashboardStats.earningsTimeline.push({
+      (await sponsorDashboardStats).earningsTimeline.push({
         date: today,
         amount: lastEntryAmount + netBonusAmount
       });
     }
 
     // Add to recent transactions
-    if (sponsorDashboardStats.recentTransactions.length > 10) {
+    if ((await sponsorDashboardStats).recentTransactions.length > 10) {
       // Keep only the 10 most recent transactions
-      sponsorDashboardStats.recentTransactions.pop();
+      (await
+        // Keep only the 10 most recent transactions
+        sponsorDashboardStats).recentTransactions.pop();
     }
 
     // Add all related transactions to the recent list
-    sponsorDashboardStats.recentTransactions.unshift(transaction);
-    sponsorDashboardStats.recentTransactions.unshift(tdsTransaction);
-    sponsorDashboardStats.recentTransactions.unshift(adminTransaction);
-    sponsorDashboardStats.recentTransactions.unshift(repurchaseTransaction);
+    (await
+      // Add all related transactions to the recent list
+      sponsorDashboardStats).recentTransactions.unshift(transaction);
+    (await sponsorDashboardStats).recentTransactions.unshift(tdsTransaction);
+    (await sponsorDashboardStats).recentTransactions.unshift(adminTransaction);
+    (await sponsorDashboardStats).recentTransactions.unshift(repurchaseTransaction);
 
     // Limit to 10 recent transactions
-    if (sponsorDashboardStats.recentTransactions.length > 10) {
-      sponsorDashboardStats.recentTransactions = sponsorDashboardStats.recentTransactions.slice(0, 10);
+    if ((await sponsorDashboardStats).recentTransactions.length > 10) {
+      (await sponsorDashboardStats).recentTransactions = (await sponsorDashboardStats).recentTransactions.slice(0, 10);
     }
 
     // Update the sponsor's dashboard stats
@@ -1386,18 +1417,24 @@ export const addTeamMatchingBonus = async(userId: string, pairs: number): Promis
     const adminDashboardStats = getUserDashboardStats(adminUser.id);
     if (adminDashboardStats) {
       // Update total earnings
-      adminDashboardStats.totalEarnings += adminFee;
+      (await
+        // Update total earnings
+        adminDashboardStats).totalEarnings += adminFee;
 
       // Update earnings by type
-      adminDashboardStats.earningsByType.team_matching =
-        (adminDashboardStats.earningsByType.team_matching || 0) + adminFee;
+      (await
+        // Update earnings by type
+        adminDashboardStats).earningsByType.team_matching =
+        ((await adminDashboardStats).earningsByType.team_matching || 0) + adminFee;
 
       // Add to admin's recent transactions
-      if (adminDashboardStats.recentTransactions.length > 10) {
+      if ((await adminDashboardStats).recentTransactions.length > 10) {
         // Keep only the 10 most recent transactions
-        adminDashboardStats.recentTransactions.pop();
+        (await
+          // Keep only the 10 most recent transactions
+          adminDashboardStats).recentTransactions.pop();
       }
-      adminDashboardStats.recentTransactions.unshift(adminBonusTransaction);
+      (await adminDashboardStats).recentTransactions.unshift(adminBonusTransaction);
 
       // Update the admin's dashboard stats
       setToStorage(`${STORAGE_KEYS.DASHBOARD_STATS}_${adminUser.id}`, adminDashboardStats);
@@ -1409,41 +1446,47 @@ export const addTeamMatchingBonus = async(userId: string, pairs: number): Promis
   if (userDashboardStats) {
     // Add to earnings timeline with the net effect
     const today = new Date().toISOString().split('T')[0];
-    const timelineIndex = userDashboardStats.earningsTimeline.findIndex(
+    const timelineIndex = (await userDashboardStats).earningsTimeline.findIndex(
       entry => entry.date === today
     );
 
     if (timelineIndex >= 0) {
       // Update existing entry for today
-      userDashboardStats.earningsTimeline[timelineIndex].amount += netBonusAmount;
+      (await
+        // Update existing entry for today
+        userDashboardStats).earningsTimeline[timelineIndex].amount += netBonusAmount;
     } else {
       // Add new entry for today
       // Find the last entry to determine the new total
-      const lastEntryAmount = userDashboardStats.earningsTimeline.length > 0
-        ? userDashboardStats.earningsTimeline[userDashboardStats.earningsTimeline.length - 1].amount
+      const lastEntryAmount = (await userDashboardStats).earningsTimeline.length > 0
+        ? (await userDashboardStats).earningsTimeline[(await userDashboardStats).earningsTimeline.length - 1].amount
         : 0;
 
-      userDashboardStats.earningsTimeline.push({
+      (await userDashboardStats).earningsTimeline.push({
         date: today,
         amount: lastEntryAmount + netBonusAmount
       });
     }
 
     // Add to recent transactions
-    if (userDashboardStats.recentTransactions.length > 10) {
+    if ((await userDashboardStats).recentTransactions.length > 10) {
       // Keep only the 10 most recent transactions
-      userDashboardStats.recentTransactions.pop();
+      (await
+        // Keep only the 10 most recent transactions
+        userDashboardStats).recentTransactions.pop();
     }
 
     // Add all related transactions to the recent list
-    userDashboardStats.recentTransactions.unshift(transaction);
-    userDashboardStats.recentTransactions.unshift(tdsTransaction);
-    userDashboardStats.recentTransactions.unshift(adminTransaction);
-    userDashboardStats.recentTransactions.unshift(repurchaseTransaction);
+    (await
+      // Add all related transactions to the recent list
+      userDashboardStats).recentTransactions.unshift(transaction);
+    (await userDashboardStats).recentTransactions.unshift(tdsTransaction);
+    (await userDashboardStats).recentTransactions.unshift(adminTransaction);
+    (await userDashboardStats).recentTransactions.unshift(repurchaseTransaction);
 
     // Limit to 10 recent transactions
-    if (userDashboardStats.recentTransactions.length > 10) {
-      userDashboardStats.recentTransactions = userDashboardStats.recentTransactions.slice(0, 10);
+    if ((await userDashboardStats).recentTransactions.length > 10) {
+      (await userDashboardStats).recentTransactions = (await userDashboardStats).recentTransactions.slice(0, 10);
     }
 
     // Update the user's dashboard stats
@@ -1624,18 +1667,24 @@ export const addRoyaltyBonus = async (userId: string, turnoverAmount: number): P
     const adminDashboardStats = getUserDashboardStats(adminUser.id);
     if (adminDashboardStats) {
       // Update total earnings
-      adminDashboardStats.totalEarnings += adminFee;
+      (await
+        // Update total earnings
+        adminDashboardStats).totalEarnings += adminFee;
 
       // Update earnings by type
-      adminDashboardStats.earningsByType.royalty_bonus =
-        (adminDashboardStats.earningsByType.royalty_bonus || 0) + adminFee;
+      (await
+        // Update earnings by type
+        adminDashboardStats).earningsByType.royalty_bonus =
+        ((await adminDashboardStats).earningsByType.royalty_bonus || 0) + adminFee;
 
       // Add to admin's recent transactions
-      if (adminDashboardStats.recentTransactions.length > 10) {
+      if ((await adminDashboardStats).recentTransactions.length > 10) {
         // Keep only the 10 most recent transactions
-        adminDashboardStats.recentTransactions.pop();
+        (await
+          // Keep only the 10 most recent transactions
+          adminDashboardStats).recentTransactions.pop();
       }
-      adminDashboardStats.recentTransactions.unshift(adminBonusTransaction);
+      (await adminDashboardStats).recentTransactions.unshift(adminBonusTransaction);
 
       // Update the admin's dashboard stats
       setToStorage(`${STORAGE_KEYS.DASHBOARD_STATS}_${adminUser.id}`, adminDashboardStats);
@@ -1647,41 +1696,47 @@ export const addRoyaltyBonus = async (userId: string, turnoverAmount: number): P
   if (userDashboardStats) {
     // Add to earnings timeline with the net effect
     const today = new Date().toISOString().split('T')[0];
-    const timelineIndex = userDashboardStats.earningsTimeline.findIndex(
+    const timelineIndex = (await userDashboardStats).earningsTimeline.findIndex(
       entry => entry.date === today
     );
 
     if (timelineIndex >= 0) {
       // Update existing entry for today
-      userDashboardStats.earningsTimeline[timelineIndex].amount += netBonusAmount;
+      (await
+        // Update existing entry for today
+        userDashboardStats).earningsTimeline[timelineIndex].amount += netBonusAmount;
     } else {
       // Add new entry for today
       // Find the last entry to determine the new total
-      const lastEntryAmount = userDashboardStats.earningsTimeline.length > 0
-        ? userDashboardStats.earningsTimeline[userDashboardStats.earningsTimeline.length - 1].amount
+      const lastEntryAmount = (await userDashboardStats).earningsTimeline.length > 0
+        ? (await userDashboardStats).earningsTimeline[(await userDashboardStats).earningsTimeline.length - 1].amount
         : 0;
 
-      userDashboardStats.earningsTimeline.push({
+      (await userDashboardStats).earningsTimeline.push({
         date: today,
         amount: lastEntryAmount + netBonusAmount
       });
     }
 
     // Add to recent transactions
-    if (userDashboardStats.recentTransactions.length > 10) {
+    if ((await userDashboardStats).recentTransactions.length > 10) {
       // Keep only the 10 most recent transactions
-      userDashboardStats.recentTransactions.pop();
+      (await
+        // Keep only the 10 most recent transactions
+        userDashboardStats).recentTransactions.pop();
     }
 
     // Add all related transactions to the recent list
-    userDashboardStats.recentTransactions.unshift(transaction);
-    userDashboardStats.recentTransactions.unshift(tdsTransaction);
-    userDashboardStats.recentTransactions.unshift(adminTransaction);
-    userDashboardStats.recentTransactions.unshift(repurchaseTransaction);
+    (await
+      // Add all related transactions to the recent list
+      userDashboardStats).recentTransactions.unshift(transaction);
+    (await userDashboardStats).recentTransactions.unshift(tdsTransaction);
+    (await userDashboardStats).recentTransactions.unshift(adminTransaction);
+    (await userDashboardStats).recentTransactions.unshift(repurchaseTransaction);
 
     // Limit to 10 recent transactions
-    if (userDashboardStats.recentTransactions.length > 10) {
-      userDashboardStats.recentTransactions = userDashboardStats.recentTransactions.slice(0, 10);
+    if ((await userDashboardStats).recentTransactions.length > 10) {
+      (await userDashboardStats).recentTransactions = (await userDashboardStats).recentTransactions.slice(0, 10);
     }
 
     // Update the user's dashboard stats
@@ -1769,16 +1824,22 @@ export const addRepurchaseBonus = async (userId: string, productAmount: number, 
     const adminDashboardStats = getUserDashboardStats(adminUser.id);
     if (adminDashboardStats) {
       // Update total earnings
-      adminDashboardStats.totalEarnings += adminFee;
+      (await
+        // Update total earnings
+        adminDashboardStats).totalEarnings += adminFee;
 
       // Update earnings by type
-      adminDashboardStats.earningsByType.repurchase_bonus =
-        (adminDashboardStats.earningsByType.repurchase_bonus || 0) + adminFee;
+      (await
+        // Update earnings by type
+        adminDashboardStats).earningsByType.repurchase_bonus =
+        ((await adminDashboardStats).earningsByType.repurchase_bonus || 0) + adminFee;
 
       // Add to admin's recent transactions
-      if (adminDashboardStats.recentTransactions.length > 10) {
+      if ((await adminDashboardStats).recentTransactions.length > 10) {
         // Keep only the 10 most recent transactions
-        adminDashboardStats.recentTransactions.pop();
+        (await
+          // Keep only the 10 most recent transactions
+          adminDashboardStats).recentTransactions.pop();
       }}
   }
 
@@ -1787,40 +1848,46 @@ export const addRepurchaseBonus = async (userId: string, productAmount: number, 
   if (userDashboardStats) {
     // Add to earnings timeline with the net effect
     const today = new Date().toISOString().split('T')[0];
-    const timelineIndex = userDashboardStats.earningsTimeline.findIndex(
+    const timelineIndex = (await userDashboardStats).earningsTimeline.findIndex(
       entry => entry.date === today
     );
 
     if (timelineIndex >= 0) {
       // Update existing entry for today
-      userDashboardStats.earningsTimeline[timelineIndex].amount += netBonusAmount;
+      (await
+        // Update existing entry for today
+        userDashboardStats).earningsTimeline[timelineIndex].amount += netBonusAmount;
     } else {
       // Add new entry for today
       // Find the last entry to determine the new total
-      const lastEntryAmount = userDashboardStats.earningsTimeline.length > 0
-        ? userDashboardStats.earningsTimeline[userDashboardStats.earningsTimeline.length - 1].amount
+      const lastEntryAmount = (await userDashboardStats).earningsTimeline.length > 0
+        ? (await userDashboardStats).earningsTimeline[(await userDashboardStats).earningsTimeline.length - 1].amount
         : 0;
 
-      userDashboardStats.earningsTimeline.push({
+      (await userDashboardStats).earningsTimeline.push({
         date: today,
         amount: lastEntryAmount + netBonusAmount
       });
     }
 
     // Add to recent transactions
-    if (userDashboardStats.recentTransactions.length > 10) {
+    if ((await userDashboardStats).recentTransactions.length > 10) {
       // Keep only the 10 most recent transactions
-      userDashboardStats.recentTransactions.pop();
+      (await
+        // Keep only the 10 most recent transactions
+        userDashboardStats).recentTransactions.pop();
     }
 
     // Add all related transactions to the recent list
-    userDashboardStats.recentTransactions.unshift(transaction);
-    userDashboardStats.recentTransactions.unshift(tdsTransaction);
-    userDashboardStats.recentTransactions.unshift(adminTransaction);
+    (await
+      // Add all related transactions to the recent list
+      userDashboardStats).recentTransactions.unshift(transaction);
+    (await userDashboardStats).recentTransactions.unshift(tdsTransaction);
+    (await userDashboardStats).recentTransactions.unshift(adminTransaction);
 
     // Limit to 10 recent transactions
-    if (userDashboardStats.recentTransactions.length > 10) {
-      userDashboardStats.recentTransactions = userDashboardStats.recentTransactions.slice(0, 10);
+    if ((await userDashboardStats).recentTransactions.length > 10) {
+      (await userDashboardStats).recentTransactions = (await userDashboardStats).recentTransactions.slice(0, 10);
     }
 
     // Update the user's dashboard stats

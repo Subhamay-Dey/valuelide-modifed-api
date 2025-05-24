@@ -481,7 +481,7 @@ const Register: React.FC = () => {
                     id="sponsorId"
                     name="sponsorId"
                     type="text"
-                    label="PositionId ID"
+                    label="Position ID"
                     value={formData.sponsorId}
                     onChange={handleChange}
                     error={errors.sponsorId}
