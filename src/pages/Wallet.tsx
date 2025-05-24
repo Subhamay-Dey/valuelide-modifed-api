@@ -60,20 +60,20 @@ const Wallet: React.FC = () => {
         localStorage.removeItem('_temp_wallet_cache');
         
         // Get user-specific wallet data with updated referral bonuses
-        // const userWallet = getUserWalletWithUpdatedBonuses(loggedInUserId);
+        const userWallet = getUserWalletWithUpdatedBonuses(loggedInUserId);
         const userDashboardStats = await getUserDashboardStats(loggedInUserId);
         const userTransactions = getUserTransactions(loggedInUserId);
         const userWithdrawalRequests = await getUserWithdrawalRequests(loggedInUserId);
         
-        // console.log('Loaded wallet data:', {
-        //   balance: userWallet.balance,
-        //   transactions: userTransactions.length,
-        //   withdrawalRequests: userWithdrawalRequests.length
-        // });
+        console.log('Loaded wallet data:', {
+          balance: userWallet.balance,
+          transactions: (await userTransactions).length,
+          withdrawalRequests: userWithdrawalRequests.length
+        });
         
-        // setWallet(userWallet);
+        setWallet(userWallet);
         setStats(userDashboardStats);
-        setTransactions(userTransactions);
+        setTransactions(await userTransactions);
         setWithdrawalRequests(userWithdrawalRequests);
       } catch (error) {
         console.error('Error loading wallet data:', error);
