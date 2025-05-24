@@ -21,7 +21,9 @@ import { formatCurrency, currencySymbol } from '../utils/currencyFormatter';
 import { getUserWithdrawalRequests, WithdrawalRequest } from '../services/walletService';
 import axios from 'axios';
 
-const API_BASE_URL = process.env.VITE_SERVER_URL || "https://valuelife-backend.onrender.com";
+//const API_BASE_URL = process.env.VITE_SERVER_URL || "https://valuelife-backend.onrender.com";
+const API_BASE_URL = import.meta.env.VITE_SERVER_URL || "https://valuelife-backend.onrender.com";
+
 
 type walletdata = {
   userId: string;

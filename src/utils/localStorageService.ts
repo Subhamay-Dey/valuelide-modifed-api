@@ -390,7 +390,7 @@ export const getAllTransactions = async (): Promise<Transaction[]> => {
 };
 
 export const getUserTransactions = async (userId: string): Promise<Transaction[]> => {
-  const transactions = await axios.get(`${serverUrl}/api/db/transactions/${userId}`);
+  const transactions =  await axios.get(`${serverUrl}/api/db/transactions?userId=${userId}`);
   return transactions.data || []
 };
 
