@@ -382,26 +382,29 @@ export const getUserDashboardStats = (userId: string): DashboardStats => {
 };
 
 // Transaction related functions
-export const getAllTransactions = (): Transaction[] => {
-  return getFromStorage<Transaction[]>(STORAGE_KEYS.TRANSACTIONS) || [];
+export const getAllTransactions = async (): Promise<Transaction[]> => {
+  // return getFromStorage<Transaction[]>(STORAGE_KEYS.TRANSACTIONS) || [];
+  const response = await axios.get(`${serverUrl}/api/db/transactions?userId=${getCurrentUser()?.id}`);
+  const data = response.data;
+  return data || []
 };
 
-export const getUserTransactions = (userId: string): Transaction[] => {
-  const transactions = getAllTransactions();
-  return transactions.filter(t => t.userId === userId);
+export const getUserTransactions = async (userId: string): Promise<Transaction[]> => {
+  const transactions = await axios.get(`${serverUrl}/api/db/transactions/${userId}`);
+  return transactions.data || []
 };
 
-export const addTransaction = (transaction: Transaction): void => {
-  const transactions = getAllTransactions();
+export const addTransaction = async (transaction: Transaction): Promise<void> => {
+  const transactions = await getAllTransactions();
   transactions.push(transaction);
   setToStorage(STORAGE_KEYS.TRANSACTIONS, transactions);
 
   // Update wallet balance
-  updateWalletAfterTransaction(transaction);
+  await updateWalletAfterTransaction(transaction);
 };
 
 // Update wallet after a transaction
-const updateWalletAfterTransaction = (transaction: Transaction): void => {
+const updateWalletAfterTransaction = async (transaction: Transaction): Promise<void> => {
   if (transaction.status !== 'completed') return;
 
   // Get the specific user's wallet
@@ -418,14 +421,16 @@ const updateWalletAfterTransaction = (transaction: Transaction): void => {
     balanceChange = transaction.amount;
   }
 
+  const userTransactions = await getUserTransactions(transaction.userId);
+
   const updatedWallet: Wallet = {
     ...userWallet,
     balance: userWallet.balance + balanceChange,
-    transactions: getUserTransactions(transaction.userId)
+    transactions: userTransactions
   };
 
   // Update the user-specific wallet
-  setToStorage(`${STORAGE_KEYS.WALLET}_${transaction.userId}, updatedWallet`);
+  setToStorage(`${STORAGE_KEYS.WALLET}_${transaction.userId}`, updatedWallet);
 
   // Also update the general wallet for backward compatibility
   const generalWallet = getWallet();
@@ -793,8 +798,8 @@ export const deleteUser = async (userId: string): Promise<boolean> => {
     setToStorage(STORAGE_KEYS.KYC_REQUESTS, updatedKycRequests);
 
     // Remove user's transactions
-    const transactions = getAllTransactions();
-    const updatedTransactions = transactions.filter(t => t.userId !== userId);
+    const transactions = await getAllTransactions();
+    const updatedTransactions = transactions.filter((t: { userId: string; }) => t.userId !== userId);
     setToStorage(STORAGE_KEYS.TRANSACTIONS, updatedTransactions);
 
     // Update network structure of other users if this user is in their downline
@@ -894,7 +899,7 @@ export const updateUserKycStatus = async (kycId: string, userId: string, status:
 export const getAdminStats = async () => {
   const users = getAllUsersForAdmin();
   const kycRequests = await getAllKycRequests();
-  const transactions = getAllTransactions();
+  const transactions = await getAllTransactions();
 
   return {
     totalUsers: users.length,
@@ -903,14 +908,14 @@ export const getAdminStats = async () => {
     rejectedKycRequests: kycRequests.filter(req => req.status === 'rejected').length,
     totalTransactions: transactions.length,
     totalEarnings: transactions
-      .filter(t => t.status === 'completed' && t.type !== 'withdrawal')
-      .reduce((sum, t) => sum + t.amount, 0),
-    totalWithdrawals: transactions
+      .filter((t: { status: string; type: string; }) => t.status === 'completed' && t.type !== 'withdrawal')
+      .reduce((sum: any, t: { amount: any; }) => sum + t.amount, 0),
+    totalWithdrawals: (await transactions)
       .filter(t => t.status === 'completed' && t.type === 'withdrawal')
-      .reduce((sum, t) => sum + Math.abs(t.amount), 0),
+      .reduce((sum: number, t: { amount: number; }) => sum + Math.abs(t.amount), 0),
     pendingWithdrawals: transactions
-      .filter(t => t.status === 'pending' && t.type === 'withdrawal')
-      .reduce((sum, t) => sum + Math.abs(t.amount), 0)
+      .filter((t: { status: string; type: string; }) => t.status === 'pending' && t.type === 'withdrawal')
+      .reduce((sum: number, t: { amount: number; }) => sum + Math.abs(t.amount), 0)
   };
 };
 
@@ -937,9 +942,9 @@ export const updateUserProfile = (userId: string, userData: Partial<User>): bool
   }
 };
 
-export const processWithdrawalRequest = (transactionId: string, approved: boolean): boolean => {
+export const processWithdrawalRequest = async (transactionId: string, approved: boolean): Promise<boolean> => {
   try {
-    const transactions = getAllTransactions();
+    const transactions = await getAllTransactions();
     const transactionIndex = transactions.findIndex(t => t.id === transactionId);
 
     if (transactionIndex === -1) {
@@ -1261,7 +1266,7 @@ export const checkAndUpdateMissingReferralBonuses = async (userId: string): Prom
   console.log(`Found ${referredUsers.length} users sponsored by ${user.name}`);
 
   // Get all existing referral bonus transactions for this user
-  const userTransactions = getUserTransactions(userId);
+  const userTransactions = await getUserTransactions(userId);
   const existingReferralBonuses = userTransactions.filter(
     t => t.type === 'referral_bonus' && t.status === 'completed'
   );
@@ -1454,14 +1459,14 @@ export const addTeamMatchingBonus = async(userId: string, pairs: number): Promis
 };
 
 // Function to check and add milestone rewards based on pair achievements
-const checkAndAddMilestoneRewards = (userId: string, newPairs: number): void => {
+const checkAndAddMilestoneRewards = async (userId: string, newPairs: number): Promise<void> => {
   const commissionStructure = getCommissionStructure();
   if (!commissionStructure.milestoneRewards || !commissionStructure.milestoneRewards.pairs) {
     return;
   }
 
   // Get user's total pairs achieved so far (including the new ones)
-  const userTransactions = getUserTransactions(userId);
+  const userTransactions = await getUserTransactions(userId);
   const teamMatchingTransactions = userTransactions.filter(t =>
     t.type === 'team_matching' && t.status === 'completed' && t.pairs
   );
@@ -1689,7 +1694,7 @@ export const addRoyaltyBonus = async (userId: string, turnoverAmount: number): P
 };
 
 // Function to calculate and add repurchase bonus
-export const addRepurchaseBonus = (userId: string, productAmount: number, productName: string): void => {
+export const addRepurchaseBonus = async (userId: string, productAmount: number, productName: string): Promise<void> => {
   // Get the commission structure to determine the bonus percentage
   const commissionStructure = getCommissionStructure();
   const repurchasePercentage = commissionStructure.repurchaseBonus / 100 || 0.03; // Default to 3% if not set
@@ -1743,7 +1748,7 @@ export const addRepurchaseBonus = (userId: string, productAmount: number, produc
 
   // Get the admin user (for admin fee allocation)
   const allUsers = getAllUsers();
-  const adminUser: User | undefined = allUsers.find((user: User) => user.email === 'admin@example.com'); // Assuming admin has this email
+  const adminUser: User | undefined = (await allUsers).find((user: User) => user.email === 'admin@example.com'); // Assuming admin has this email
 
   if (adminUser) {
     // Add the admin fee to the admin's wallet
